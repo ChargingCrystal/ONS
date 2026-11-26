@@ -183,6 +183,61 @@ test('operator Auth deletion removes personal rows while the surviving partner c
   await assert.rejects(pg.query('select join_space($1)', [finalInvite]), { code: '22023' })
 })
 
+function expectedUtcMonths(serverTime) {
+  const now = new Date(serverTime)
+  return Array.from({ length: 12 }, (_, index) =>
+    new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 11 + index, 1)).toISOString().slice(0, 7))
+}
+
+test('dashboard fills all twelve months when the space is empty', async () => {
+  await migrate()
+  await login(0)
+  await pg.query('select create_space()')
+  const { dashboard } = (await pg.query('select dashboard()')).rows[0]
+  assert.deepEqual(dashboard.datesByMonth, expectedUtcMonths(dashboard.serverTime).map(month => ({ month, total: 0 })))
+  assert.deepEqual(dashboard.categoriesByMonth, [])
+  assert.equal(dashboard.nextMeeting, null)
+})
+
+test('dashboard uses UTC month boundaries and excludes other spaces and dates outside the series', async () => {
+  await migrate()
+  await pg.exec("set time zone 'Pacific/Kiritimati'; begin")
+  await login(0)
+  await pg.query('select create_space()')
+  await login(1)
+  await pg.query('select create_space()')
+  await pg.query("insert into dates(title, category) values ('Foreign', 'game')")
+
+  await pg.exec('reset role')
+  await login(0)
+  await pg.query(`
+    with boundary as (
+      select date_trunc('month', now() at time zone 'UTC') as month
+    )
+    insert into public.dates(space_id, title, category, created_at)
+    select public.my_space(), seed.title, seed.category, seed.created_at at time zone 'UTC'
+    from boundary cross join lateral (values
+      ('Too old', 'walk', month - interval '11 months 1 microsecond'),
+      ('Window start', 'walk', month - interval '11 months'),
+      ('Previous month', 'walk', month - interval '1 microsecond'),
+      ('Current month', 'walk', month),
+      ('Another category', 'movie', month),
+      ('Next month', 'walk', month + interval '1 month')
+    ) as seed(title, category, created_at)
+  `)
+  await pg.exec('set role authenticated')
+  const { dashboard } = (await pg.query('select dashboard()')).rows[0]
+  const months = expectedUtcMonths(dashboard.serverTime)
+  const totals = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2]
+  assert.deepEqual(dashboard.datesByMonth, months.map((month, index) => ({ month, total: totals[index] })))
+  assert.deepEqual(dashboard.categoriesByMonth.filter(row => row.month === months[11]), [
+    { month: months[11], category: 'movie', total: 1 },
+    { month: months[11], category: 'walk', total: 1 },
+  ])
+  assert.equal(dashboard.categoriesByMonth.reduce((total, row) => total + row.total, 0), 6)
+  await pg.exec('commit')
+})
+
 test('pairing, one-time invite, shared dates, private locations and outsider isolation', async () => {
   await migrate()
   await login(0)

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readdir, readFile } from 'node:fs/promises'
 import { PGlite } from '@electric-sql/pglite'
 import { afterEach, beforeEach, test } from 'vitest'
+import { DATE_CATEGORIES } from '../shared/date-categories'
 
 let pg
 let users
@@ -71,7 +72,7 @@ test('pairing, one-time invite, shared dates, private locations and outsider iso
   await login(0)
   await pg.query('select create_space()')
   const { invite } = (await pg.query('select invite from spaces')).rows[0]
-  await pg.query("insert into dates(title,category) values('Cinema','film')")
+  await pg.query("insert into dates(title,category) values('Cinema','movie')")
   await pg.query('insert into locations(lat,lon) values(52,12)')
   await login(1)
   await pg.query('select join_space($1)', [invite])
@@ -107,15 +108,15 @@ test('dashboard returns the earliest upcoming planned meeting in the caller’s 
   await migrate()
   await login(1)
   await pg.query('select create_space()')
-  await pg.query("insert into dates(title, category, meeting_at) values ('Other space', 'film', now() + interval '1 hour')")
+  await pg.query("insert into dates(title, category, meeting_at) values ('Other space', 'movie', now() + interval '1 hour')")
 
   await login(0)
   await pg.query('select create_space()')
   await pg.query(`insert into dates(title, category, status, meeting_at) values
-    ('Past', 'film', 'planned', now() - interval '1 day'),
-    ('Done', 'film', 'done', now() + interval '2 hours'),
-    ('Next', 'film', 'planned', now() + interval '1 day'),
-    ('Later', 'film', 'planned', now() + interval '2 days')`)
+    ('Past', 'movie', 'planned', now() - interval '1 day'),
+    ('Done', 'movie', 'done', now() + interval '2 hours'),
+    ('Next', 'movie', 'planned', now() + interval '1 day'),
+    ('Later', 'movie', 'planned', now() + interval '2 days')`)
   const { data } = (await pg.query('select dashboard() as data')).rows[0]
   assert.equal(data.nextMeeting.title, 'Next')
 })
@@ -199,7 +200,12 @@ test('Postgres rejects unsupported categories on insert and update', async () =>
   await migrate()
   await login(0)
   await pg.query('select create_space()')
-  await pg.query("insert into dates(title, category) values ('Cinema', 'movie')")
+  const { rows } = await pg.query(`
+    insert into dates(title, category)
+    select 'Date ' || category, category from unnest($1::text[]) as category
+    returning category
+  `, [DATE_CATEGORIES])
+  assert.deepEqual(rows.map(row => row.category).sort(), [...DATE_CATEGORIES].sort())
   await assert.rejects(pg.query("insert into dates(title, category) values ('Cinema', 'cinema')"), { code: '23514' })
   await assert.rejects(pg.query("update dates set category = 'Movie'"), { code: '23514' })
 })

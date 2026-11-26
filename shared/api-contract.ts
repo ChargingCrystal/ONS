@@ -1,9 +1,11 @@
 import { z } from 'zod'
+import { DATE_CATEGORIES } from './date-categories'
 
 const uuid = z.uuid()
 const timestamp = z.iso.datetime({ offset: true })
 const invite = z.string().regex(/^[a-f0-9]{32}$/)
 const dateStatus = z.enum(['planned', 'done'])
+export const dateCategorySchema = z.enum(DATE_CATEGORIES)
 const offset = z.coerce.number().int().nonnegative().default(0)
 const coordinates = {
   lat: z.number().min(-90).max(90),
@@ -13,7 +15,7 @@ const coordinates = {
 export const joinSpaceRequestSchema = z.strictObject({ code: invite })
 export const createDateRequestSchema = z.strictObject({
   title: z.string().trim().min(1).max(160),
-  category: z.string().trim().min(1).max(60),
+  category: dateCategorySchema,
   status: dateStatus.optional(),
   meeting_at: timestamp.nullable().optional(),
 })
@@ -21,7 +23,7 @@ export const updateDateRequestSchema = createDateRequestSchema.partial().refine(
 export const dateParamsSchema = z.object({ id: uuid })
 export const datesQuerySchema = z.object({
   q: z.string().max(160).optional(),
-  category: z.string().optional(),
+  category: dateCategorySchema.optional(),
   status: dateStatus.optional(),
   sort: z.enum(['title', 'meeting_at', 'created_at']).default('created_at'),
   order: z.enum(['asc', 'desc']).default('desc'),
@@ -48,7 +50,7 @@ export const dateResponseSchema = z.object({
   id: uuid,
   space_id: uuid,
   title: z.string(),
-  category: z.string(),
+  category: dateCategorySchema,
   status: dateStatus,
   meeting_at: timestamp.nullable(),
   created_at: timestamp,
@@ -66,7 +68,7 @@ export const dashboardResponseSchema = z.object({
   nextMeeting: dateResponseSchema.nullable(),
   categoriesByMonth: z.array(z.object({
     month: z.string().regex(/^\d{4}-\d{2}$/),
-    category: z.string(),
+    category: dateCategorySchema,
     total: z.number().int().nonnegative(),
   })),
 })

@@ -1,4 +1,10 @@
-# Backend backlog
+# Backlog
+
+## Frontend
+
+- **F2 Auth** (register, login, Google sign-in, logout, route protection): claimed by `Filionus`, branch `feat/auth`, in progress.
+
+## Backend
 
 Findings from the first backend review, in the order we want to work through them.
 Status of the backend at review time: `npm test` and `npm run build` pass; API not yet tested against a real Supabase project.

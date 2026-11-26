@@ -92,6 +92,13 @@
   min-height: var(--ons-size-nav);
 }
 
+/* Draws the focus ring inside the element, for items that touch the screen edge. */
+@utility focus-inset {
+  &:focus-visible {
+    outline-offset: calc(-1 * var(--ons-focus-width));
+  }
+}
+
 @layer base {
   body {
     background-color: var(--ons-color-canvas);

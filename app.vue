@@ -17,5 +17,9 @@ useHead({
 </script>
 
 <template>
-  <NuxtPage />
+  <!-- Reads the new page title to screen reader users after a navigation. -->
+  <NuxtRouteAnnouncer />
+  <NuxtLayout>
+    <NuxtPage />
+  </NuxtLayout>
 </template>

@@ -3,6 +3,8 @@ import { once } from 'node:events'
 import type { AddressInfo } from 'node:net'
 import * as h3 from 'h3'
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from 'vitest'
+import { apiErrorResponseSchema } from '../shared/api-errors'
+import * as contract from '../shared/api-contract'
 import * as backend from '../server/utils/backend'
 
 const id = '36ac3324-27c7-4867-91ba-8d73375eacaa'
@@ -13,6 +15,14 @@ let configured = true
 const fetchHttp = globalThis.fetch
 let server: ReturnType<typeof createServer>
 let origin: string
+
+const now = '2026-11-26T10:00:00+00:00'
+const coordinates = { lat: 52, lon: 12 }
+const partner = { user_id: id, ...coordinates }
+const date = { id, space_id: id, title: 'Cinema', category: 'film', status: 'planned', meeting_at: null, created_at: now }
+const space = { id, invite, members: [{ user_id: id, slot: 1 }] }
+const dashboard = { serverTime: now, nextMeeting: null, categoriesByMonth: [{ month: '2026-11', category: 'film', total: 1 }] }
+const photo = { id, path: id + '/' + id, fullPath: 'gallery/' + id + '/' + id }
 
 beforeAll(async () => {
   for (const name of ['defineEventHandler', 'createError', 'getHeader', 'getRouterParam', 'getValidatedRouterParams', 'getValidatedQuery', 'readValidatedBody', 'sendNoContent'] as const) {
@@ -27,6 +37,8 @@ beforeAll(async () => {
   vi.stubGlobal('fetch', upstream)
 
   const router = h3.createRouter()
+  router.get('/api/health', (await import('../server/api/health.get')).default)
+  router.get('/api/space', (await import('../server/api/space/index.get')).default)
   router.post('/api/space', (await import('../server/api/space/index.post')).default)
   router.post('/api/space/join', (await import('../server/api/space/join.post')).default)
   router.get('/api/dates', (await import('../server/api/dates/index.get')).default)
@@ -34,8 +46,10 @@ beforeAll(async () => {
   router.patch('/api/dates/:id', (await import('../server/api/dates/[id].patch')).default)
   router.delete('/api/dates/:id', (await import('../server/api/dates/[id].delete')).default)
   router.put('/api/location', (await import('../server/api/location.put')).default)
+  router.get('/api/location', (await import('../server/api/location.get')).default)
   router.get('/api/dashboard', (await import('../server/api/dashboard.get')).default)
   router.post('/api/photos', (await import('../server/api/photos/index.post')).default)
+  router.get('/api/photos', (await import('../server/api/photos/index.get')).default)
   router.delete('/api/photos/:name', (await import('../server/api/photos/[name].delete')).default)
   server = createServer(h3.toNodeListener(h3.createApp().use(router))).listen(0, '127.0.0.1')
   await once(server, 'listening')
@@ -71,7 +85,7 @@ function request(method: string, path: string, body?: BodyInit, token = true, co
 async function expectError(response: Response, status: number, code: string) {
   expect(response.status).toBe(status)
   const json = await response.json()
-  expect(json).toMatchObject({ data: { code } })
+  expect(apiErrorResponseSchema.parse(json)).toEqual({ statusCode: status, data: { code } })
   expect(JSON.stringify(json)).not.toContain(secret)
 }
 
@@ -141,4 +155,63 @@ test('returns internal when Supabase configuration is unavailable', async () => 
 test('returns internal for unexpected upstream errors without claiming a pairing conflict', async () => {
   postgresError('23505', 409)
   await expectError(await request('GET', '/dashboard'), 500, 'internal')
+})
+
+test.each([
+  { method: 'GET', path: '/health', schema: contract.healthResponseSchema, upstreamData: [] },
+  { method: 'GET', path: '/space', schema: contract.spaceResponseSchema, upstreamData: [space] },
+  { method: 'POST', path: '/space', schema: contract.spaceIdResponseSchema, upstreamData: [id] },
+  { method: 'POST', path: '/space/join', schema: contract.spaceIdResponseSchema, upstreamData: [id], body: { code: invite } },
+  { method: 'GET', path: '/dates', schema: contract.datesResponseSchema, upstreamData: [[date]] },
+  { method: 'POST', path: '/dates', schema: contract.dateResponseSchema, upstreamData: [id, date], body: { title: 'Cinema', category: 'film' } },
+  { method: 'PATCH', path: '/dates/' + id, schema: contract.dateResponseSchema, upstreamData: [date], body: { title: 'Cinema' } },
+  { method: 'GET', path: '/location', schema: contract.locationResponseSchema, upstreamData: [[partner]] },
+  { method: 'PUT', path: '/location', schema: contract.savedLocationResponseSchema, upstreamData: [id, { ...partner, space_id: id }], body: coordinates },
+  { method: 'GET', path: '/dashboard', schema: contract.dashboardResponseSchema, upstreamData: [dashboard] },
+  {
+    method: 'GET',
+    path: '/photos',
+    schema: contract.photosResponseSchema,
+    upstreamData: [
+      id,
+      [{ name: id, created_at: now }],
+      [{ path: photo.path, error: null, signedURL: '/object/sign/' + photo.fullPath + '?token=test' }],
+    ],
+  },
+])('$method $path matches its shared response schema', async ({ method, path, schema, upstreamData, body }) => {
+  for (const data of upstreamData) {
+    upstream.mockResolvedValueOnce(Response.json(data))
+  }
+  const response = await request(method, path, body === undefined ? undefined : JSON.stringify(body))
+  expect(response.status).toBe(200)
+  schema.parse(await response.json())
+})
+
+test('photo uploads match the shared response schema', async () => {
+  upstream.mockResolvedValueOnce(Response.json(id))
+  upstream.mockImplementationOnce(async input => {
+    const key = new URL(String(input)).pathname.split('/object/')[1]
+    return Response.json({ Id: photo.id, Key: key })
+  })
+  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aE1sAAAAASUVORK5CYII=', 'base64'))
+  const uploadRequest = contract.uploadPhotoRequestSchema.parse({ body: png, contentType: 'image/png' })
+  const response = await request('POST', '/photos', uploadRequest.body, true, uploadRequest.contentType)
+  expect(response.status).toBe(200)
+  const upload = contract.uploadPhotoResponseSchema.parse(await response.json())
+  expect(upload.id).toBe(photo.id)
+  expect(upload.path).toMatch(new RegExp('^' + id + '/[a-f0-9-]{36}$'))
+  expect(upload.fullPath).toBe('gallery/' + upload.path)
+})
+
+test.each([
+  { method: 'GET', path: '/space', upstreamData: [null] },
+  { method: 'DELETE', path: '/dates/' + id, upstreamData: [{ id }] },
+  { method: 'DELETE', path: '/photos/' + id, upstreamData: [id, []] },
+])('$method $path returns the shared empty response', async ({ method, path, upstreamData }) => {
+  for (const data of upstreamData) {
+    upstream.mockResolvedValueOnce(Response.json(data))
+  }
+  const response = await request(method, path)
+  expect(response.status).toBe(204)
+  contract.noContentResponseSchema.parse(await response.text())
 })

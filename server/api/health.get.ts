@@ -1,1 +1,3 @@
-export default defineEventHandler(() => ({ status: 'ok' }))
+import { defineApiHandler } from '../utils/api-error'
+
+export default defineApiHandler(() => ({ status: 'ok' }))

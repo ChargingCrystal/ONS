@@ -71,14 +71,15 @@ export const locationResponseSchema = z.object({
   midpoint: z.object(coordinates).nullable(),
 })
 export const savedLocationResponseSchema = partnerLocationSchema.extend({ space_id: uuid })
+const monthTotalSchema = z.object({
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  total: z.number().int().nonnegative(),
+})
 export const dashboardResponseSchema = z.object({
   serverTime: timestamp,
   nextMeeting: dateResponseSchema.nullable(),
-  categoriesByMonth: z.array(z.object({
-    month: z.string().regex(/^\d{4}-\d{2}$/),
-    category: dateCategorySchema,
-    total: z.number().int().nonnegative(),
-  })),
+  categoriesByMonth: z.array(monthTotalSchema.extend({ category: dateCategorySchema })),
+  datesByMonth: z.array(monthTotalSchema).length(12),
 })
 export const photosResponseSchema = z.array(z.object({
   name: uuid,

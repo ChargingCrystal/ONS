@@ -65,7 +65,7 @@ Send `Authorization: Bearer <access_token>` on authenticated routes and `Accept:
 | `GET /api/location` | Bearer | — | `200` with `partners`, `distanceKm`, and `midpoint`. Unavailable derived values are null. | `unauthorized`, `internal` |
 | `PUT /api/location` | Bearer | JSON `lat` and `lon` | `200` with the saved location row | `validation_failed`, `no_space`, `unauthorized`, `internal` |
 | `DELETE /api/location` | Bearer | — | `204`, including when the caller has no saved location | `unauthorized`, `internal` |
-| `GET /api/dashboard` | Bearer | — | `200` with `serverTime`, `nextMeeting`, and `categoriesByMonth` grouped by UTC month and category key | `unauthorized`, `internal` |
+| `GET /api/dashboard` | Bearer | — | `200` with `serverTime`, `nextMeeting`, twelve UTC `datesByMonth` totals, and historical `categoriesByMonth` grouped by UTC month and category key | `unauthorized`, `internal` |
 | `GET /api/photos` | Bearer | Optional `offset` | `200` with up to 30 uploads newest first, with signed URLs valid for five minutes | `validation_failed`, `no_space`, `unauthorized`, `internal` |
 | `POST /api/photos` | Bearer | Raw JPEG, PNG, or WebP bytes with matching `Content-Type`, up to 5 MiB in Nitro | `200` with Storage `id`, `path`, and `fullPath` | `validation_failed`, `no_space`, `unauthorized`, `internal` |
 | `DELETE /api/photos/:name` | Bearer | UUID `name` from the gallery | `204`, including when the name is absent from the caller's gallery | `validation_failed`, `no_space`, `unauthorized`, `internal` |
@@ -92,6 +92,30 @@ A remaining partner keeps shared dates and photos and can generate another invit
 4. Coordinate cleanup for abandoned spaces separately. Deleting the Auth user ends token refresh, while access tokens already issued may remain valid until expiry. The removed membership blocks shared-space reads through RLS.
 
 The app does not expose an Auth account-deletion endpoint or require a service-role key in Nitro. [Supabase user deletion](https://supabase.com/docs/guides/auth/managing-user-data#deleting-users)
+
+### Dashboard charts
+
+Use `datesByMonth` for the monthly trend and `categoriesByMonth` for category breakdowns. Both group dates by their UTC creation month. The trend includes the current UTC month and the eleven preceding months in chronological order, with zeros for gaps. The category breakdown continues to include all recorded months. Use `serverTime` with `nextMeeting` for the countdown.
+
+For a space with three dates created in November 2026 and no upcoming meeting, the response is:
+
+```json
+{
+  "serverTime": "2026-11-26T11:00:00Z",
+  "nextMeeting": null,
+  "datesByMonth": [
+    {"month":"2025-12","total":0}, {"month":"2026-01","total":0},
+    {"month":"2026-02","total":0}, {"month":"2026-03","total":0},
+    {"month":"2026-04","total":0}, {"month":"2026-05","total":0},
+    {"month":"2026-06","total":0}, {"month":"2026-07","total":0},
+    {"month":"2026-08","total":0}, {"month":"2026-09","total":0},
+    {"month":"2026-10","total":0}, {"month":"2026-11","total":3}
+  ],
+  "categoriesByMonth": [{"month":"2026-11","category":"movie","total":3}]
+}
+```
+
+Apply migration `006` before the frontend depends on `datesByMonth`.
 
 ### Error codes and statuses
 

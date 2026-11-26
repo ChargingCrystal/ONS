@@ -1,0 +1,128 @@
+/* Global stylesheet: loads Tailwind and connects it to the design tokens. */
+
+/* source(none) plus @source: only these files are searched for class names. */
+@import 'tailwindcss' source(none);
+@source '../../app.vue';
+@source '../../components';
+@source '../../layouts';
+@source '../../pages';
+
+@import './tokens.css';
+
+/*
+ * Tailwind utilities for the tokens, for example bg-canvas, text-muted, p-4, rounded-md.
+ * "initial" removes Tailwind's default values, so only token values exist.
+ * "inline" makes the utilities reference the --ons-* variables directly.
+ */
+@theme inline {
+  --color-*: initial;
+  --color-canvas: var(--ons-color-canvas);
+  --color-surface: var(--ons-color-surface);
+  --color-line: var(--ons-color-line);
+  --color-ink: var(--ons-color-ink);
+  --color-muted: var(--ons-color-muted);
+  --color-accent: var(--ons-color-accent);
+  --color-on-accent: var(--ons-color-on-accent);
+
+  --font-*: initial;
+  --font-heading: var(--ons-font-heading);
+  --font-body: var(--ons-font-body);
+
+  --text-*: initial;
+  --text-sm: var(--ons-text-sm);
+  --text-sm--line-height: var(--ons-leading-normal);
+  --text-base: var(--ons-text-base);
+  --text-base--line-height: var(--ons-leading-normal);
+  --text-lg: var(--ons-text-lg);
+  --text-lg--line-height: var(--ons-leading-tight);
+  --text-xl: var(--ons-text-xl);
+  --text-xl--line-height: var(--ons-leading-tight);
+  --text-2xl: var(--ons-text-2xl);
+  --text-2xl--line-height: var(--ons-leading-tight);
+
+  --font-weight-*: initial;
+  --font-weight-normal: var(--ons-weight-normal);
+  --font-weight-strong: var(--ons-weight-strong);
+
+  /* Only the listed steps exist: p-5 or m-7 produce no CSS. */
+  --spacing: initial;
+  --spacing-*: initial;
+  --spacing-0: 0px;
+  --spacing-1: var(--ons-space-1);
+  --spacing-2: var(--ons-space-2);
+  --spacing-3: var(--ons-space-3);
+  --spacing-4: var(--ons-space-4);
+  --spacing-6: var(--ons-space-6);
+  --spacing-8: var(--ons-space-8);
+  --spacing-12: var(--ons-space-12);
+  --spacing-touch: var(--ons-size-touch);
+
+  --radius-*: initial;
+  --radius-sm: var(--ons-radius-sm);
+  --radius-md: var(--ons-radius-md);
+  --radius-lg: var(--ons-radius-lg);
+  --radius-full: var(--ons-radius-full);
+
+  --container-*: initial;
+  --container-content: var(--ons-size-content);
+}
+
+/*
+ * Breakpoints cannot come from CSS variables, because media queries do not read them.
+ * "md" is where the navigation moves from the bottom to the top.
+ */
+@theme {
+  --breakpoint-*: initial;
+  --breakpoint-md: 48rem;
+}
+
+/* Styles the current page link, for example current:text-accent. */
+@custom-variant current (&[aria-current='page'], &[aria-current='true']);
+
+/* Room for the fixed bottom navigation and the home indicator on phones. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility pb-nav {
+  padding-bottom: calc(var(--ons-size-nav) + var(--ons-space-6) + env(safe-area-inset-bottom));
+}
+
+@utility min-h-nav {
+  min-height: var(--ons-size-nav);
+}
+
+@layer base {
+  body {
+    background-color: var(--ons-color-canvas);
+    color: var(--ons-color-ink);
+    font-family: var(--ons-font-body);
+    font-size: var(--ons-text-base);
+    line-height: var(--ons-leading-normal);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--ons-font-heading);
+    line-height: var(--ons-leading-tight);
+  }
+
+  /* One visible focus style for every keyboard-focusable element. */
+  :focus-visible {
+    outline: var(--ons-focus-width) solid var(--ons-color-focus);
+    outline-offset: var(--ons-focus-offset);
+  }
+
+  /* Respect the device setting for reduced motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

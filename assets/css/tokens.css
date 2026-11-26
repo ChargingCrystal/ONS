@@ -1,0 +1,99 @@
+/*
+ * Design tokens for Ons. This is the only file with raw design values.
+ *
+ * Swapping the look:
+ *   1. Change the palette (part 1) or add palette entries.
+ *   2. Point the colour roles (part 2) at them.
+ *   3. Run `npm test`: it checks that text and focus colours stay readable.
+ *
+ * Write palette colours as #rrggbb so the contrast test can read them.
+ * All current values are placeholders until the logo and illustrations arrive.
+ */
+:root {
+  /* Follow the light or dark setting of the device. */
+  color-scheme: light dark;
+
+  /* 1. Palette: raw brand values. Components never use these directly. */
+  --palette-white: #ffffff;
+  --palette-sand-50: #fbf7f2;
+  --palette-sand-200: #e8ded2;
+  --palette-sand-300: #cdbfb0;
+  --palette-ink-500: #645a6b;
+  --palette-ink-700: #4a3f55;
+  --palette-ink-800: #2c2434;
+  --palette-ink-900: #1d1823;
+  --palette-plum-300: #e6a8d6;
+  --palette-plum-700: #7a3468;
+  --palette-blue-300: #8ec5ff;
+  --palette-blue-700: #1c5fb8;
+
+  /* 2. Colour roles: light-dark(light theme, dark theme). */
+  /* Page background */
+  --ons-color-canvas: light-dark(var(--palette-sand-50), var(--palette-ink-900));
+  /* Header, navigation, cards */
+  --ons-color-surface: light-dark(var(--palette-white), var(--palette-ink-800));
+  /* Decorative borders and dividers */
+  --ons-color-line: light-dark(var(--palette-sand-200), var(--palette-ink-700));
+  /* Main text */
+  --ons-color-ink: light-dark(var(--palette-ink-900), var(--palette-sand-50));
+  /* Secondary text */
+  --ons-color-muted: light-dark(var(--palette-ink-500), var(--palette-sand-300));
+  /* Links, active items, primary buttons */
+  --ons-color-accent: light-dark(var(--palette-plum-700), var(--palette-plum-300));
+  /* Text on an accent background */
+  --ons-color-on-accent: light-dark(var(--palette-white), var(--palette-ink-900));
+  /* Keyboard focus ring */
+  --ons-color-focus: light-dark(var(--palette-blue-700), var(--palette-blue-300));
+
+  /* 3. Typography. System fonts until the brand typefaces are chosen. */
+  --ons-font-heading: ui-serif, Georgia, 'Times New Roman', serif;
+  --ons-font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Type scale */
+  --ons-text-sm: 0.875rem;
+  --ons-text-base: 1rem;
+  --ons-text-lg: 1.25rem;
+  --ons-text-xl: 1.563rem;
+  --ons-text-2xl: 1.953rem;
+
+  --ons-leading-tight: 1.2;
+  --ons-leading-normal: 1.5;
+
+  --ons-weight-normal: 400;
+  --ons-weight-strong: 600;
+
+  /* 4. Spacing */
+  --ons-space-1: 0.25rem;
+  --ons-space-2: 0.5rem;
+  --ons-space-3: 0.75rem;
+  --ons-space-4: 1rem;
+  --ons-space-6: 1.5rem;
+  --ons-space-8: 2rem;
+  --ons-space-12: 3rem;
+
+  /* 5. Shape */
+  --ons-radius-sm: 0.375rem;
+  --ons-radius-md: 0.75rem;
+  --ons-radius-lg: 1.25rem;
+  --ons-radius-full: 999px;
+
+  --ons-focus-width: 3px;
+  --ons-focus-offset: 2px;
+
+  /* 6. Sizes */
+  /* Smallest comfortable touch target (44px) */
+  --ons-size-touch: 2.75rem;
+  /* Height of the bottom navigation on small screens */
+  --ons-size-nav: 3.5rem;
+  /* Widest content column */
+  --ons-size-content: 64rem;
+}
+
+/* Hooks for a manual theme switch. Nothing sets data-theme yet. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}

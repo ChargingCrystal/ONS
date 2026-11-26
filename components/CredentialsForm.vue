@@ -7,7 +7,7 @@ const props = defineProps<{
 const { t } = useI18n()
 const session = useSessionStore()
 const route = useRoute()
-const localePath = useLocalePath()
+const returnTarget = useReturnTarget()
 
 const email = ref('')
 const password = ref('')
@@ -51,7 +51,7 @@ async function attempt(request: () => Promise<void>) {
 }
 
 function openRequestedPage() {
-  return navigateTo(safeRedirect(route.query.redirect, localePath('/dashboard')))
+  return navigateTo(returnTarget(route.query.redirect))
 }
 
 async function submit() {

@@ -20,7 +20,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // Composables must be called before the first "await".
   const session = useSessionStore()
-  const localePath = useLocalePath()
+  const returnTarget = useReturnTarget()
   const goToLogin = useLoginRedirect()
   // Route names end in the language, for example "dates___en".
   const language = String(to.name).split('___')[1] as 'de' | 'en' | 'nl' | undefined
@@ -29,7 +29,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (to.meta.access === 'guest') {
     if (session.isSignedIn) {
-      return navigateTo(safeRedirect(to.query.redirect, localePath('/dashboard', language)))
+      return navigateTo(returnTarget(to.query.redirect, language))
     }
     return
   }

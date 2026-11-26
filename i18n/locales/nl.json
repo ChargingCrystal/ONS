@@ -66,6 +66,23 @@
       "rejected": "Het inloggen is geweigerd. Controleer je invoer.",
       "tooManyAttempts": "Te veel pogingen. Wacht even en probeer het opnieuw.",
       "unavailable": "Inloggen is op dit moment niet beschikbaar."
+    },
+    "form": {
+      "emailRequired": "Vul je e-mailadres in.",
+      "emailInvalid": "Dit is geen geldig e-mailadres.",
+      "passwordRequired": "Vul je wachtwoord in.",
+      "passwordTooShort": "Het wachtwoord moet minstens {min} tekens hebben."
     }
+  },
+  "auth": {
+    "email": "E-mailadres",
+    "password": "Wachtwoord",
+    "passwordHint": "Minstens {min} tekens.",
+    "signIn": "Inloggen",
+    "createAccount": "Account aanmaken",
+    "google": "Doorgaan met Google",
+    "noAccount": "Nog geen account? Maak er een aan",
+    "haveAccount": "Heb je al een account? Log in",
+    "confirmationSent": "Bijna klaar: we hebben een bevestigingslink naar {email} gestuurd. Open die het liefst in deze browser."
   }
 }

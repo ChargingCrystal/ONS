@@ -67,6 +67,7 @@
 
   --container-*: initial;
   --container-content: var(--ons-size-content);
+  --container-form: var(--ons-size-form);
 }
 
 /*
@@ -92,6 +93,11 @@
 
 @utility min-h-nav {
   min-height: var(--ons-size-nav);
+}
+
+/* For buttons that are waiting, as in disabled:faded. */
+@utility faded {
+  opacity: var(--ons-opacity-disabled);
 }
 
 /* Draws the focus ring inside the element, for items that touch the screen edge. */

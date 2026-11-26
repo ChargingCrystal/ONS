@@ -8,5 +8,6 @@ useHead({ title: () => t('pages.register.title') })
 <template>
   <section>
     <h1 class="text-2xl">{{ t('pages.register.title') }}</h1>
+    <CredentialsForm mode="register" />
   </section>
 </template>

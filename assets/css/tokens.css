@@ -95,6 +95,11 @@
   --ons-size-nav: 3.5rem;
   /* Widest content column */
   --ons-size-content: 64rem;
+  /* Widest form */
+  --ons-size-form: 24rem;
+
+  /* How strongly a button fades while it is waiting */
+  --ons-opacity-disabled: 0.6;
 }
 
 /* Hooks for a manual theme switch. Nothing sets data-theme yet. */

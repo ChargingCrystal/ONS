@@ -66,6 +66,23 @@
       "rejected": "Die Anmeldung wurde abgelehnt. Bitte prüfe deine Eingaben.",
       "tooManyAttempts": "Zu viele Versuche. Bitte warte kurz und versuche es erneut.",
       "unavailable": "Die Anmeldung ist derzeit nicht verfügbar."
+    },
+    "form": {
+      "emailRequired": "Bitte gib deine E-Mail-Adresse ein.",
+      "emailInvalid": "Das ist keine gültige E-Mail-Adresse.",
+      "passwordRequired": "Bitte gib dein Passwort ein.",
+      "passwordTooShort": "Das Passwort braucht mindestens {min} Zeichen."
     }
+  },
+  "auth": {
+    "email": "E-Mail-Adresse",
+    "password": "Passwort",
+    "passwordHint": "Mindestens {min} Zeichen.",
+    "signIn": "Anmelden",
+    "createAccount": "Konto erstellen",
+    "google": "Mit Google fortfahren",
+    "noAccount": "Noch kein Konto? Registrieren",
+    "haveAccount": "Schon ein Konto? Anmelden",
+    "confirmationSent": "Fast geschafft: Wir haben einen Bestätigungslink an {email} geschickt. Öffne ihn am besten in diesem Browser."
   }
 }

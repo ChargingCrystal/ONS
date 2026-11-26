@@ -2,7 +2,7 @@ import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { AuthApiError, AuthRetryableFetchError } from '@supabase/supabase-js'
 import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { createFakeAuth } from '../../composables/__tests__/fake-auth'
+import { createFakeAuth, stubProviderSettings } from '../../composables/__tests__/fake-auth'
 import { resetSession } from '../../composables/__tests__/reset-session'
 import LoginPage from '../login.vue'
 import { button, description, field } from '../../composables/__tests__/form-helpers'
@@ -171,8 +171,13 @@ describe('login form', () => {
 })
 
 describe('Google button', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   test('starts the Google sign-in', async () => {
     const wrapper = await open()
+    stubProviderSettings({ google: true })
 
     await button(wrapper, 'Mit Google fortfahren').trigger('click')
     await flushPromises()
@@ -185,15 +190,14 @@ describe('Google button', () => {
     expect(wrapper.find('[aria-invalid]').exists()).toBe(false)
   })
 
-  test('explains when Google sign-in is not available', async () => {
-    fake.auth.signInWithOAuth.mockResolvedValueOnce({
-      data: {},
-      error: new AuthApiError('Unsupported provider', 400, 'validation_failed'),
-    })
+  test('stays in the app and explains it when Google is switched off', async () => {
     const wrapper = await open()
+    stubProviderSettings({ google: false })
 
     await button(wrapper, 'Mit Google fortfahren').trigger('click')
 
-    await vi.waitFor(() => expect(alertText(wrapper)).toContain('Die Anmeldung wurde abgelehnt.'))
+    await vi.waitFor(() => expect(alertText(wrapper)).toBe('Diese Anmeldeart ist derzeit nicht verfügbar.'))
+    expect(fake.auth.signInWithOAuth).not.toHaveBeenCalled()
+    expect(button(wrapper, 'Mit Google fortfahren').attributes('disabled')).toBeUndefined()
   })
 })

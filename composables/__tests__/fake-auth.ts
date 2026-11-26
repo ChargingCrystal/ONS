@@ -14,6 +14,14 @@ export function fakeSession(email: string, accessToken: string) {
   } as Session
 }
 
+// Answers requests the way /auth/v1/settings does: which sign-in providers are switched on.
+// Call vi.unstubAllGlobals() after the test.
+export function stubProviderSettings(providers: { google: boolean }) {
+  const request = vi.fn(async (_url: string, _options?: object) => ({ external: { email: true, ...providers } }))
+  vi.stubGlobal('$fetch', request)
+  return request
+}
+
 export function createFakeAuth(options: { signedInAs?: string } = {}) {
   let issued = 0
   // Every new session gets a new token: token-1, token-2, and so on.

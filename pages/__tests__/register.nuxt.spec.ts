@@ -2,7 +2,7 @@ import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { AuthApiError } from '@supabase/supabase-js'
 import { enableAutoUnmount, flushPromises } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { createFakeAuth } from '../../composables/__tests__/fake-auth'
+import { createFakeAuth, stubProviderSettings } from '../../composables/__tests__/fake-auth'
 import { resetSession } from '../../composables/__tests__/reset-session'
 import RegisterPage from '../register.vue'
 import { button, description, field } from '../../composables/__tests__/form-helpers'
@@ -92,9 +92,11 @@ describe('registration form', () => {
 
   test('offers Google and a link back to the login page', async () => {
     const wrapper = await open()
+    stubProviderSettings({ google: true })
     await button(wrapper, 'Mit Google fortfahren').trigger('click')
     await flushPromises()
     expect(fake.auth.signInWithOAuth).toHaveBeenCalled()
     expect(wrapper.get('a[href="/login"]').text()).toContain('Anmelden')
+    vi.unstubAllGlobals()
   })
 })

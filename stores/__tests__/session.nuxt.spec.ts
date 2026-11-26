@@ -1,7 +1,7 @@
 import { mockNuxtImport } from '@nuxt/test-utils/runtime'
 import { AuthApiError, AuthRetryableFetchError } from '@supabase/supabase-js'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
-import { createFakeAuth } from '../../composables/__tests__/fake-auth'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { createFakeAuth, stubProviderSettings } from '../../composables/__tests__/fake-auth'
 import { resetSession } from '../../composables/__tests__/reset-session'
 import { useSessionStore } from '../session'
 
@@ -23,6 +23,10 @@ const callbackPage = () => `${window.location.origin}/auth/callback`
 
 beforeEach(() => {
   start()
+})
+
+afterEach(() => {
+  vi.unstubAllGlobals()
 })
 
 describe('restoring a session', () => {
@@ -118,6 +122,7 @@ describe('signing in and registering', () => {
   })
 
   test('starts Google sign-in with the callback page as return address', async () => {
+    stubProviderSettings({ google: true })
     const session = start()
     await session.signInWithGoogle()
     expect(fake.auth.signInWithOAuth).toHaveBeenCalledWith({
@@ -126,7 +131,39 @@ describe('signing in and registering', () => {
     })
   })
 
+  test('asks Supabase with the public key whether Google is switched on', async () => {
+    const request = stubProviderSettings({ google: true })
+    const session = start()
+
+    await session.signInWithGoogle()
+
+    expect(request).toHaveBeenCalledWith(
+      expect.stringContaining('/auth/v1/settings'),
+      expect.objectContaining({ headers: { apikey: useRuntimeConfig().public.supabaseKey } }),
+    )
+  })
+
+  // Supabase would send the browser to a page that shows its raw error.
+  test('does not leave the app when Google is switched off', async () => {
+    stubProviderSettings({ google: false })
+    const session = start()
+
+    await expect(session.signInWithGoogle()).rejects.toMatchObject({ code: 'provider_disabled' })
+
+    expect(fake.auth.signInWithOAuth).not.toHaveBeenCalled()
+  })
+
+  test('does not leave the app when Supabase cannot be asked', async () => {
+    stubProviderSettings({ google: true }).mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    const session = start()
+
+    await expect(session.signInWithGoogle()).rejects.toMatchObject({ code: 'network' })
+
+    expect(fake.auth.signInWithOAuth).not.toHaveBeenCalled()
+  })
+
   test('reports a Google sign-in that cannot start', async () => {
+    stubProviderSettings({ google: true })
     const session = start()
     fake.auth.signInWithOAuth.mockResolvedValueOnce({
       data: {},

@@ -176,6 +176,13 @@ describe('access token', () => {
     await expect(session.accessToken()).resolves.toBeNull()
   })
 
+  test('reports an unreachable server instead of looking signed out', async () => {
+    const session = start({ signedInAs: 'ann@example.org' })
+    // An expired token cannot be renewed while offline.
+    fake.auth.getSession.mockResolvedValueOnce({ data: { session: null }, error: offline() })
+    await expect(session.accessToken()).rejects.toMatchObject({ code: 'network' })
+  })
+
   test('refresh returns a new token', async () => {
     const session = start({ signedInAs: 'ann@example.org' })
     await expect(session.refresh()).resolves.toBe('token-2')

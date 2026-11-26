@@ -3,7 +3,7 @@ import { defineConfig } from 'vitest/config'
 
 // Frontend tests live in __tests__ folders next to the code they check.
 // Backend tests stay in tests/.
-const frontendTests = '{assets,components,i18n,layouts,pages}/**/__tests__'
+const frontendTests = '{assets,components,composables,i18n,layouts,middleware,pages,stores}/**/__tests__'
 
 export default defineConfig(async () => ({
   test: {

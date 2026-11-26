@@ -40,10 +40,18 @@ export const uploadPhotoRequestSchema = z.object({
 })
 
 export const healthResponseSchema = z.object({ status: z.literal('ok') })
+const displayName = z.string().trim().min(1).max(60)
+export const updateProfileRequestSchema = z.strictObject({ display_name: displayName })
+export const profileResponseSchema = z.object({ display_name: displayName.nullable() })
+export const inviteResponseSchema = z.object({ invite })
 export const spaceIdResponseSchema = z.object({ id: uuid })
 export const spaceResponseSchema = spaceIdResponseSchema.extend({
   invite: invite.nullable(),
-  members: z.array(z.object({ user_id: uuid, slot: z.union([z.literal(1), z.literal(2)]) })),
+  members: z.array(z.object({
+    user_id: uuid,
+    slot: z.union([z.literal(1), z.literal(2)]),
+    display_name: displayName.nullable(),
+  })),
 })
 export const noContentResponseSchema = z.literal('')
 export const dateResponseSchema = z.object({
@@ -90,6 +98,9 @@ export type PhotoParams = z.input<typeof photoParamsSchema>
 export type PhotoContentType = z.infer<typeof photoContentTypeSchema>
 export type UploadPhotoRequest = z.input<typeof uploadPhotoRequestSchema>
 export type HealthResponse = z.infer<typeof healthResponseSchema>
+export type UpdateProfileRequest = z.input<typeof updateProfileRequestSchema>
+export type ProfileResponse = z.infer<typeof profileResponseSchema>
+export type InviteResponse = z.infer<typeof inviteResponseSchema>
 export type SpaceIdResponse = z.infer<typeof spaceIdResponseSchema>
 export type SpaceResponse = z.infer<typeof spaceResponseSchema>
 export type NoContentResponse = z.infer<typeof noContentResponseSchema>

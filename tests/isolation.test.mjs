@@ -110,8 +110,10 @@ test('leaving removes membership and location and lets the remaining partner re-
   await migrate()
   await login(0)
   await pg.query('select create_space()')
-  const { invite } = (await pg.query('select invite from spaces')).rows[0]
+  const { id, invite } = (await pg.query('select id, invite from spaces')).rows[0]
   await pg.query("insert into dates(title, category) values ('Shared walk', 'walk')")
+  const photo = id + '/11111111-1111-4111-8111-111111111111'
+  await pg.query("insert into storage.objects(bucket_id, name) values ('gallery', $1)", [photo])
   await pg.query('insert into locations(lat, lon) values (52, 12)')
   await pg.query("insert into profiles(display_name) values ('Alex')")
   await login(1)
@@ -121,8 +123,10 @@ test('leaving removes membership and location and lets the remaining partner re-
   await pg.query('select leave_space()')
   await pg.query('select leave_space()')
   assert.deepEqual((await pg.query('select title from dates')).rows, [])
+  assert.deepEqual((await pg.query('select name from storage.objects')).rows, [])
   await login(1)
   assert.deepEqual((await pg.query('select title from dates')).rows, [{ title: 'Shared walk' }])
+  assert.deepEqual((await pg.query('select name from storage.objects')).rows, [{ name: photo }])
   assert.deepEqual((await pg.query('select user_id from locations')).rows, [{ user_id: users[1].id }])
   assert.deepEqual((await pg.query('select display_name from profiles')).rows, [])
   const { invite: replacement } = (await pg.query('select regenerate_invite() as invite')).rows[0]

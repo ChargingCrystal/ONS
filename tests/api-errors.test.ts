@@ -20,7 +20,7 @@ const now = '2026-11-26T10:00:00+00:00'
 const coordinates = { lat: 52, lon: 12 }
 const partner = { user_id: id, ...coordinates }
 const date = { id, space_id: id, title: 'Cinema', category: 'movie', status: 'planned', meeting_at: null, created_at: now }
-const space = { id, invite, members: [{ user_id: id, slot: 1 }] }
+const space = { id, invite, members: [{ user_id: id, slot: 1, display_name: null }] }
 const dashboard = { serverTime: now, nextMeeting: null, categoriesByMonth: [{ month: '2026-11', category: 'movie', total: 1 }] }
 const photo = { id, path: id + '/' + id, fullPath: 'gallery/' + id + '/' + id }
 
@@ -47,17 +47,11 @@ beforeAll(async () => {
   router.delete('/api/dates/:id', (await import('../server/api/dates/[id].delete')).default)
   router.put('/api/location', (await import('../server/api/location.put')).default)
   router.get('/api/location', (await import('../server/api/location.get')).default)
-  const lifecycle = import.meta.glob<{ default: h3.EventHandler }>('../server/api/{profile/*,space/invite.post,space/membership.delete,location.delete}.ts')
-  for (const [method, path, file] of [
-    ['get', '/api/profile', 'profile/index.get'],
-    ['put', '/api/profile', 'profile/index.put'],
-    ['post', '/api/space/invite', 'space/invite.post'],
-    ['delete', '/api/space/membership', 'space/membership.delete'],
-    ['delete', '/api/location', 'location.delete'],
-  ] as const) {
-    const load = lifecycle['../server/api/' + file + '.ts']
-    if (load) router[method](path, (await load()).default)
-  }
+  router.get('/api/profile', (await import('../server/api/profile/index.get')).default)
+  router.put('/api/profile', (await import('../server/api/profile/index.put')).default)
+  router.post('/api/space/invite', (await import('../server/api/space/invite.post')).default)
+  router.delete('/api/space/membership', (await import('../server/api/space/membership.delete')).default)
+  router.delete('/api/location', (await import('../server/api/location.delete')).default)
   router.get('/api/dashboard', (await import('../server/api/dashboard.get')).default)
   router.post('/api/photos', (await import('../server/api/photos/index.post')).default)
   router.get('/api/photos', (await import('../server/api/photos/index.get')).default)
@@ -242,14 +236,14 @@ test('returns a profile even before a name is set', async () => {
   upstream.mockResolvedValueOnce(Response.json({ display_name: null }))
   const response = await request('GET', '/profile')
   expect(response.status).toBe(200)
-  expect(await response.json()).toEqual({ display_name: null })
+  expect(contract.profileResponseSchema.parse(await response.json())).toEqual({ display_name: null })
 })
 
 test('trims and saves a profile name', async () => {
   upstream.mockResolvedValueOnce(Response.json({ display_name: 'Alex' }))
   const response = await request('PUT', '/profile', '{"display_name":" Alex "}')
   expect(response.status).toBe(200)
-  expect(await response.json()).toEqual({ display_name: 'Alex' })
+  expect(contract.profileResponseSchema.parse(await response.json())).toEqual({ display_name: 'Alex' })
   expect(JSON.parse(String(upstream.mock.calls[0][1].body))).toEqual({ display_name: 'Alex' })
 })
 
@@ -265,14 +259,14 @@ test('returns partner display names on the space response', async () => {
   })
   const response = await request('GET', '/space')
   expect(response.status).toBe(200)
-  expect((await response.json()).members[0].display_name).toBe('Alex')
+  expect(contract.spaceResponseSchema.parse(await response.json()).members[0].display_name).toBe('Alex')
 })
 
 test('regenerates invites and returns the new code', async () => {
   upstream.mockResolvedValueOnce(Response.json(invite))
   const response = await request('POST', '/space/invite')
   expect(response.status).toBe(200)
-  expect(await response.json()).toEqual({ invite })
+  expect(contract.inviteResponseSchema.parse(await response.json())).toEqual({ invite })
 })
 
 test.each([

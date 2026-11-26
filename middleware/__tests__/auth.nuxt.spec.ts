@@ -79,6 +79,10 @@ describe('signed in', () => {
     expect((await visit('/login?redirect=/map')).path).toBe('/map')
   })
 
+  test('the login page leads on to the target in its own language', async () => {
+    expect((await visit('/en/login?redirect=/map')).path).toBe('/en/map')
+  })
+
   test('the login page ignores a target outside the app', async () => {
     expect((await visit('/login?redirect=https://evil.example')).path).toBe('/dashboard')
   })

@@ -85,6 +85,23 @@ describe('login form', () => {
     await vi.waitFor(() => expect(currentPath()).toBe('/map'))
   })
 
+  // Somebody follows a German link, switches to English on the login page and signs in.
+  test('continues in the language of the login page', async () => {
+    const wrapper = await open('/en/login?redirect=/map')
+
+    await field(wrapper, 'Email address').setValue('ann@example.org')
+    await field(wrapper, 'Password').setValue('secret-1')
+    await wrapper.get('form').trigger('submit')
+
+    await vi.waitFor(() => expect(currentPath()).toBe('/en/map'))
+  })
+
+  test('translates the return address back to German and keeps its query', async () => {
+    const wrapper = await open('/login?redirect=%2Fen%2Fdates%3Fstatus%3Ddone')
+    await signIn(wrapper)
+    await vi.waitFor(() => expect(useRouter().currentRoute.value.fullPath).toBe('/dates?status=done'))
+  })
+
   test('does not follow a return address outside the app', async () => {
     const wrapper = await open('/login?redirect=//evil.example')
     await signIn(wrapper)

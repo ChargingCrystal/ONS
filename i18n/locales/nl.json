@@ -4,7 +4,7 @@
   },
   "nav": {
     "label": "Hoofdnavigatie",
-    "home": "Home",
+    "dashboard": "Overzicht",
     "dates": "Dates",
     "map": "Kaart",
     "photos": "Foto's"
@@ -41,6 +41,9 @@
     },
     "register": {
       "title": "Account aanmaken"
+    },
+    "callback": {
+      "title": "Inloggen"
     }
   },
   "errors": {
@@ -83,6 +86,13 @@
     "google": "Doorgaan met Google",
     "noAccount": "Nog geen account? Maak er een aan",
     "haveAccount": "Heb je al een account? Log in",
-    "confirmationSent": "Bijna klaar: we hebben een bevestigingslink naar {email} gestuurd. Open die het liefst in deze browser."
+    "confirmationSent": "Bijna klaar: we hebben een bevestigingslink naar {email} gestuurd. Open die het liefst in deze browser.",
+    "signOut": "Uitloggen",
+    "callback": {
+      "working": "Het inloggen wordt afgerond …",
+      "rejected": "Het inloggen is geannuleerd of geweigerd.",
+      "incomplete": "We konden je niet automatisch inloggen. Heb je net je e-mailadres bevestigd? Log dan nu gewoon in.",
+      "toLogin": "Naar inloggen"
+    }
   }
 }

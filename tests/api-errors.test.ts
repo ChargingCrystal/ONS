@@ -54,6 +54,11 @@ beforeAll(async () => {
   router.delete('/api/location', (await import('../server/api/location.delete')).default)
   router.get('/api/dashboard', (await import('../server/api/dashboard.get')).default)
   router.post('/api/photos', (await import('../server/api/photos/index.post')).default)
+  const photoRoutes = import.meta.glob<{ default: h3.EventHandler }>('../server/api/photos/{upload-url,confirm}.post.ts')
+  for (const name of ['upload-url', 'confirm']) {
+    const load = photoRoutes['../server/api/photos/' + name + '.post.ts']
+    if (load) router.post('/api/photos/' + name, (await load()).default)
+  }
   router.get('/api/photos', (await import('../server/api/photos/index.get')).default)
   router.delete('/api/photos/:name', (await import('../server/api/photos/[name].delete')).default)
   server = createServer(h3.toNodeListener(h3.createApp().use(router))).listen(0, '127.0.0.1')
@@ -143,6 +148,29 @@ test('returns validation_failed and retains 413 for oversized photos', async () 
   upstream.mockResolvedValueOnce(Response.json(id))
   const body = new Uint8Array(5 * 1024 * 1024 + 1)
   await expectError(await request('POST', '/photos', body, true, 'image/png'), 413, 'validation_failed')
+})
+
+test.each([
+  [{ mime: 'text/plain', size: 5 }, 415],
+  [{ mime: 'image/png', size: 5242881 }, 413],
+] as const)('rejects invalid signed-upload metadata %j', async (body, status) => {
+  await expectError(await request('POST', '/photos/upload-url', JSON.stringify(body)), status, 'validation_failed')
+  expect(upstream).not.toHaveBeenCalled()
+})
+
+test('rejects an over-quota reservation before signing', async () => {
+  postgresError('PT409', 409)
+  const response = await request('POST', '/photos/upload-url', '{"mime":"image/png","size":42}')
+  expect(response.status).toBe(409)
+  expect(await response.json()).toMatchObject({ data: { code: 'quota_exceeded' } })
+  expect(upstream).toHaveBeenCalledTimes(1)
+})
+
+test('returns the same not_found for an invisible or missing photo', async () => {
+  upstream.mockResolvedValueOnce(Response.json(id))
+  upstream.mockResolvedValueOnce(Response.json([]))
+  await expectError(await request('DELETE', '/photos/' + id), 404, 'not_found')
+  expect(upstream).toHaveBeenCalledTimes(2)
 })
 
 test('returns unauthorized for missing and rejected bearer tokens', async () => {

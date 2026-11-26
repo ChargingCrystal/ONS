@@ -33,6 +33,9 @@ beforeEach(async () => {
     create table storage.objects (
       bucket_id text not null references storage.buckets(id),
       name text not null,
+      metadata jsonb,
+      owner_id text,
+      created_at timestamptz not null default now(),
       primary key (bucket_id, name)
     );
     create function storage.foldername(name text) returns text[] language sql immutable as $$
@@ -66,6 +69,42 @@ afterEach(async () => {
 })
 
 const login = i => pg.query("select set_config('request.jwt.claim.sub',$1,false)", [users[i].id])
+
+test('reserves the maximum upload size before allocating signed paths', async () => {
+  await migrate()
+  await login(0)
+  await pg.query('select create_space()')
+  for (let index = 0; index < 10; index++) {
+    await pg.query("select reserve_photo_upload('image/png', 1)")
+  }
+  await assert.rejects(pg.query("select reserve_photo_upload('image/png', 1)"), { code: 'PT409' })
+  await login(2)
+  await pg.query('select create_space()')
+  await pg.query("select reserve_photo_upload('image/png', 1)")
+})
+
+test('confirms stored photo metadata at most once and isolates foreign spaces', async () => {
+  await migrate()
+  await login(0)
+  const { id: space } = (await pg.query('select create_space() as id')).rows[0]
+  const { uploadId, path } = (await pg.query("select reserve_photo_upload('image/png', 10) as data")).rows[0].data
+  assert.equal(path, space + '/' + uploadId)
+  await assert.rejects(pg.query('select confirm_photo($1)', [uploadId]), { code: 'PT404' })
+  await pg.query("insert into storage.objects(bucket_id, name, metadata) values ('gallery', $1, $2)", [path, { size: 11, mimetype: 'image/png' }])
+  await assert.rejects(pg.query('select confirm_photo($1)', [uploadId]), { code: 'PT400' })
+  await pg.exec('reset role')
+  await pg.query('update storage.objects set metadata = $2 where name = $1', [path, { size: 10, mimetype: 'image/png' }])
+  await pg.exec('set role authenticated')
+  const { photo } = (await pg.query('select confirm_photo($1) as photo', [uploadId])).rows[0]
+  assert.equal(photo.id, uploadId)
+  assert.equal(photo.size, 10)
+  assert.deepEqual((await pg.query('select confirm_photo($1) as photo', [uploadId])).rows[0].photo, photo)
+  await login(2)
+  await pg.query('select create_space()')
+  assert.deepEqual((await pg.query('select id from photos')).rows, [])
+  await assert.rejects(pg.query('select confirm_photo($1)', [uploadId]), { code: 'PT404' })
+  await assert.rejects(pg.query('select forget_photo($1)', [uploadId]), { code: 'PT404' })
+})
 
 test('profiles are visible to the owner and current partner, with owner-only writes', async () => {
   await migrate()

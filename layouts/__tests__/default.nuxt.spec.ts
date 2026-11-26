@@ -1,6 +1,6 @@
 import { mountSuspended } from '@nuxt/test-utils/runtime'
 import { enableAutoUnmount } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import DefaultLayout from '../default.vue'
 
 // The tests attach the layout to the page, so remove it again after each one.
@@ -40,6 +40,18 @@ describe('default layout', () => {
     expect(wrapper.get('main').attributes('id')).toBe('main')
     expect(wrapper.get('main').attributes('tabindex')).toBe('-1')
     expect(wrapper.get('main').text()).toContain('page content')
+  })
+
+  test('the language switcher in the header changes the language of the layout', async () => {
+    const wrapper = await mountLayout()
+
+    await wrapper.get('header a[data-locale="en"]').trigger('click')
+
+    await vi.waitFor(() => {
+      expect(wrapper.get('a[href="#main"]').text()).toBe('Skip to content')
+      expect(wrapper.get('header a[data-locale="en"]').attributes('aria-current')).toBe('true')
+      expect(useRouter().currentRoute.value.path).toBe('/en')
+    })
   })
 
   test('has a header with home link and language switcher, and one main navigation', async () => {

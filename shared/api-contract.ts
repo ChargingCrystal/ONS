@@ -34,9 +34,27 @@ export const photosQuerySchema = z.object({ offset })
 export const photoParamsSchema = z.object({ name: uuid })
 export const photoContentTypeSchema = z.enum(['image/jpeg', 'image/png', 'image/webp'])
 export const photoUploadMaxBytes = 5 * 1024 * 1024
-export const uploadPhotoRequestSchema = z.object({
-  contentType: photoContentTypeSchema,
-  body: z.instanceof(Uint8Array).refine(bytes => bytes.byteLength <= photoUploadMaxBytes),
+export const photoSpaceQuotaBytes = 50 * 1024 * 1024
+const photoSizeSchema = z.number().int().positive().max(photoUploadMaxBytes)
+export const photoUploadUrlRequestSchema = z.strictObject({
+  mime: photoContentTypeSchema,
+  size: photoSizeSchema,
+})
+export const photoUploadUrlResponseSchema = z.object({
+  uploadId: uuid,
+  path: z.string(),
+  signedUrl: z.url(),
+  token: z.string().min(1),
+})
+export const confirmPhotoRequestSchema = z.strictObject({ uploadId: uuid })
+export const photoResponseSchema = z.object({
+  id: uuid,
+  space_id: uuid,
+  path: z.string(),
+  mime: photoContentTypeSchema,
+  size: photoSizeSchema,
+  uploaded_by: uuid.nullable(),
+  created_at: timestamp,
 })
 
 export const healthResponseSchema = z.object({ status: z.literal('ok') })
@@ -85,8 +103,10 @@ export const photosResponseSchema = z.array(z.object({
   name: uuid,
   createdAt: timestamp,
   url: z.url().nullish(),
+  mime: photoContentTypeSchema,
+  size: photoSizeSchema,
+  uploadedBy: uuid.nullable(),
 }))
-export const uploadPhotoResponseSchema = z.object({ id: uuid, path: z.string(), fullPath: z.string() })
 
 export type JoinSpaceRequest = z.input<typeof joinSpaceRequestSchema>
 export type CreateDateRequest = z.input<typeof createDateRequestSchema>
@@ -97,7 +117,10 @@ export type UpdateLocationRequest = z.input<typeof updateLocationRequestSchema>
 export type PhotosQuery = z.input<typeof photosQuerySchema>
 export type PhotoParams = z.input<typeof photoParamsSchema>
 export type PhotoContentType = z.infer<typeof photoContentTypeSchema>
-export type UploadPhotoRequest = z.input<typeof uploadPhotoRequestSchema>
+export type PhotoUploadUrlRequest = z.input<typeof photoUploadUrlRequestSchema>
+export type PhotoUploadUrlResponse = z.infer<typeof photoUploadUrlResponseSchema>
+export type ConfirmPhotoRequest = z.input<typeof confirmPhotoRequestSchema>
+export type PhotoResponse = z.infer<typeof photoResponseSchema>
 export type HealthResponse = z.infer<typeof healthResponseSchema>
 export type UpdateProfileRequest = z.input<typeof updateProfileRequestSchema>
 export type ProfileResponse = z.infer<typeof profileResponseSchema>
@@ -111,4 +134,3 @@ export type LocationResponse = z.infer<typeof locationResponseSchema>
 export type SavedLocationResponse = z.infer<typeof savedLocationResponseSchema>
 export type DashboardResponse = z.infer<typeof dashboardResponseSchema>
 export type PhotosResponse = z.infer<typeof photosResponseSchema>
-export type UploadPhotoResponse = z.infer<typeof uploadPhotoResponseSchema>

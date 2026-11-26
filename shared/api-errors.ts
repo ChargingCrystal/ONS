@@ -5,6 +5,7 @@ export const apiErrorCodeSchema = z.enum([
   'already_paired',
   'no_space',
   'not_found',
+  'quota_exceeded',
   'validation_failed',
   'unauthorized',
   'internal',

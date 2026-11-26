@@ -1,9 +1,9 @@
 // Checks that run in the browser before anything is sent. Supabase checks again.
 // Each function returns a message key, or undefined if the value is fine.
 
-// Keep in step with minimum_password_length in supabase/config.toml. It is not set there,
-// so the default of Supabase Auth applies. A test compares both.
-export const PASSWORD_MIN_LENGTH = 6
+// Supabase recommends at least 8 characters. minimum_password_length in
+// supabase/config.toml has to say the same; a test compares both.
+export const PASSWORD_MIN_LENGTH = 8
 
 // Something, an @, something, a dot, something; no spaces.
 const emailShape = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

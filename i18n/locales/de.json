@@ -1,0 +1,37 @@
+{
+  "app": {
+    "name": "Ons"
+  },
+  "nav": {
+    "label": "Hauptnavigation",
+    "home": "Start",
+    "dates": "Dates",
+    "map": "Karte",
+    "photos": "Fotos"
+  },
+  "language": {
+    "label": "Sprache"
+  },
+  "a11y": {
+    "skipToContent": "Zum Inhalt springen"
+  },
+  "common": {
+    "comingSoon": "Diese Seite folgt bald."
+  },
+  "pages": {
+    "home": {
+      "title": "Start",
+      "intro": "Euer gemeinsamer Planer für die Fernbeziehung.",
+      "backendStatus": "Backend-Status"
+    },
+    "dates": {
+      "title": "Dates"
+    },
+    "map": {
+      "title": "Karte"
+    },
+    "photos": {
+      "title": "Fotos"
+    }
+  }
+}

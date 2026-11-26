@@ -12,12 +12,18 @@
     "node": ">=22.12.0"
   },
   "dependencies": {
+    "@nuxtjs/i18n": "10.2.3",
     "@supabase/supabase-js": "^2.100.0",
     "nuxt": "^3.21.11",
     "zod": "^4.0.0"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.0",
+    "@nuxt/test-utils": "^4.4.0",
+    "@tailwindcss/vite": "^4.3.5",
+    "@vue/test-utils": "^2.6.0",
+    "happy-dom": "^21.0.4",
+    "tailwindcss": "^4.3.5",
     "typescript": "^5.9.0",
     "vitest": "^4.1.12"
   }

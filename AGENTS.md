@@ -19,10 +19,15 @@ Course milestones: working prototype for Business Angel Meeting II (December), p
 - Supabase: Postgres, Auth (email/password, Google), private Storage
 - Deployment target: Vercel (app) + Supabase (backend services), free tiers
 - Backend prototype exists and is being hardened (see `docs/BACKLOG.md`).
-  The frontend is being built now; `app.vue` is still a stub.
+  The frontend has an app shell (layout, navigation, design tokens, DE/EN/NL); the feature pages are placeholders.
 - Frontend stack from `docs/Lastenheft_Ons.md`: Pinia, `@nuxtjs/i18n` (DE/EN/NL), Tailwind or UnoCSS,
   Leaflet or MapLibre, Chart.js or ECharts. The frontend dev decides between the "or" options and records the
   choice here. A new dependency goes in `package.json`, a shared file: say why in the PR description.
+- Decided: styling uses **Tailwind CSS v4** (`tailwindcss` with `@tailwindcss/vite`). Design tokens are plain CSS
+  variables, so the look can be changed without knowing Tailwind (see Frontend rules).
+- Decided: `@nuxtjs/i18n` is pinned to exactly **10.2.3**. Later releases require `vue-router` 5, while Nuxt 3.21
+  ships version 4. Do not upgrade it without moving to a Nuxt version that matches.
+- Not installed yet: Pinia, the map library and the chart library.
 
 ## Ownership (who works where)
 
@@ -43,8 +48,8 @@ stop and describe what is needed (route, fields, error codes) instead of editing
   (e.g. `useApi`) that also handles 401 (redirect to login) and maps error codes; do not call `$fetch` ad hoc.
 - Any API change (route, field, error code) updates the API table in `README.md` and the types in `shared/`
   in the same PR, and the PR description names the frontend impact.
-- Error responses carry a stable `code`; the frontend maps codes to i18n messages and never shows server text.
-  (Planned in backlog B5; until then, handle HTTP status only.)
+- Error responses carry a stable `data.code` (listed in `shared/api-errors.ts`); the frontend maps codes to
+  i18n messages and never shows server text.
 - Schema changes (migrations) are backend-only, and only one migration PR is open at a time.
 
 ## Commands
@@ -55,11 +60,16 @@ supabase start                  # local Postgres/Auth/Storage (needs Docker)
 supabase migration up --local   # apply supabase/migrations/*
 cp .env.example .env            # then set NUXT_PUBLIC_SUPABASE_KEY from `supabase status`
 npm run dev                     # Nuxt dev server on :3000 (frontend and API together)
-npm test                        # node:test + PGlite, no Docker needed
+npm test                        # Vitest, backend and frontend tests, no Docker needed
 npm run build                   # Nuxt/Nitro production build
 ```
 
 `npm test` and `npm run build` must pass before every merge.
+
+- On Windows, run npm from a path with an upper-case drive letter (`E:\...`, not `e:\...`). Otherwise Vitest
+  fails with "failed to find the runner".
+- CI uses npm 10 (Node 22). After adding or updating a package with npm 11, run
+  `npx npm@10 install --package-lock-only`, otherwise `npm ci` can fail in CI.
 
 ## Test-driven development (applies to everyone)
 
@@ -91,8 +101,9 @@ What to test, per layer:
 Test behavior, not implementation: no snapshot tests of whole pages, no asserting on CSS classes or internal state,
 no mocking of the unit under test. Keep tests fast and independent of each other.
 
-Tooling target: Vitest as the single runner for unit, component and database tests (`npm test`), Playwright for E2E.
-Until the backend dev has migrated the existing test (backlog B9), `npm test` still runs `node:test`.
+Vitest is the single runner for unit, component and database tests (`npm test`). Playwright for E2E is not set up yet.
+Backend tests live in `tests/`. Frontend tests live in `__tests__/` folders next to the code: `*.nuxt.spec.ts`
+runs inside a Nuxt runtime, other `*.spec.ts` files run in plain Node (see `vitest.config.ts`).
 "Done" always includes: new behavior has a test, and `npm test` and `npm run build` pass.
 
 ## Backend rules (do not break these)
@@ -108,24 +119,32 @@ Rule 1 applies to everyone, including the frontend.
 3. **Every `security definer` function**: `set search_path = ''`, fully qualified names, `revoke ... from public, anon`,
    `grant execute ... to authenticated`.
 4. **Migrations are append-only.** Add a new numbered file in `supabase/migrations/`.
-   Do not edit `001_*` or `002_*` once they are applied anywhere other than your own machine.
+   Do not edit an existing migration once it is applied anywhere other than your own machine.
 5. **Validate all input with zod** (`z.strictObject`, bounded lengths, UUID params with `z.uuid()`).
 6. **Map DB errors through `result()`** and do not leak raw database messages to clients.
 7. **Photos** live in the private bucket `gallery` under `<space_id>/<uuid>`. Access goes through
    signed URLs only. Resolve the space with `room(db)` before touching storage paths.
 8. **Any change to SQL, RLS or grants requires an extension of `tests/isolation.test.mjs`.**
-   The test only loads `001_couple_planner.sql` today; if you add policies in a later migration, load it too.
+   The test loads every file in `supabase/migrations/` in order.
 
 ## Frontend rules
 
 - **All user-facing text goes through i18n** (DE, EN, NL; fallback DE). No hardcoded strings. A new key is added in
-  all three languages in the same PR.
+  all three languages in the same PR. Message files are in `i18n/locales/`.
+- **Language URLs:** German has no prefix (`/dates`), the others do (`/en/dates`, `/nl/dates`). Link with
+  `NuxtLinkLocale`. The choice is saved in the `ons_locale` cookie. SEO link tags stay off until F10.
 - **Mobile first and responsive.** Everything must work by keyboard with visible focus, and with sufficient contrast.
+- **New main page:** add the file in `pages/` and one entry in `components/AppNav.vue`.
 - **Design tokens in one place** (colors, type scale, spacing, radius), derived from the logo and illustrations
   provided by the designer; no magic values in components. Illustrations live in `assets/illustrations/`.
+  - Raw values live only in `assets/css/tokens.css`. `assets/css/main.css` maps them to Tailwind utilities and
+    removes Tailwind's default scales, so a class such as `p-5` produces no CSS: add the token first.
+  - Components use colour roles (`bg-canvas`, `text-muted`), never palette values.
+  - `assets/__tests__/template-guard.spec.ts` rejects hardcoded text, raw colours and bracket values such as
+    `p-[13px]` in `pages/`, `components/` and `layouts/` (short exception list in the test).
+    `assets/__tests__/contrast.spec.ts` checks the colour contrast of the tokens.
 - **Pinia** for session, space and shared UI state; data fetching lives in composables, not in components.
-- **Categories** are free text today. After backlog B2 they become keys whose labels come from i18n; do not build
-  features that depend on the raw category text.
+- **Date categories** are fixed keys from `shared/date-categories.ts`; their labels come from i18n by key.
 - Auth: the Supabase client is provided as `useNuxtApp().$supabase` (client only, see `plugins/auth.client.ts`).
   Protect pages with route middleware, not with `v-if` in components.
 
@@ -135,7 +154,7 @@ Rule 1 applies to everyone, including the frontend.
 | --- | --- |
 | `spaces(id, invite)` | `invite` is a 32-char hex code, set to null when a partner joins (one-time) |
 | `members(user_id, space_id, slot)` | `user_id` is the PK, so one space per person; `slot` is 1 or 2, so max two members |
-| `dates(id, space_id, title, category, status, meeting_at, created_at)` | `status` is `planned` or `done`; `category` is currently free text (see backlog) |
+| `dates(id, space_id, title, category, status, meeting_at, created_at)` | `status` is `planned` or `done`; `category` is one of the keys in `shared/date-categories.ts` (check constraint) |
 | `locations(user_id, space_id, lat, lon)` | one row per member; only the owner can write |
 | RPCs | `my_space()`, `create_space()`, `join_space(code)`, `dashboard()` |
 | Storage | bucket `gallery`: private, 5 MiB, jpeg/png/webp |
@@ -144,7 +163,7 @@ The API surface is documented in the table in `README.md`. Do not duplicate it h
 
 ## Conventions
 
-- Code, comments, docs and commit messages in **English** (course language). The existing `README.md` is German; translate it when touching it.
+- Code, comments, docs and commit messages in **English** (course language).
 - Write readable code: one statement per line, no clever one-liners, short comments for any non-obvious SQL.
   The team has to explain every line in the final pitch.
 - Do not add dependencies without saying why in the PR description.
@@ -170,7 +189,7 @@ The API surface is documented in the table in `README.md`. Do not duplicate it h
 - `docs/Lastenheft_Ons.md`: requirements, evaluation criteria, timeline
 - `docs/BACKLOG.md`: known gaps and the agreed order of work
 - `README.md`: setup and the API table (the contract with the frontend)
-- `shared/`: types shared between frontend and API (create when first needed)
-- `server/utils/backend.ts`: shared Nitro helpers (`client`, `result`, `room`, `dateFields`)
+- `shared/`: request and response schemas, error codes and category keys shared between frontend and API
+- `server/utils/backend.ts`: shared Nitro helpers (`client`, `result`, `room`)
 - `supabase/migrations/`: schema, RLS, storage policies
 - `tests/isolation.test.mjs`: RLS and pairing tests

@@ -2,19 +2,19 @@ import { createClient } from '@supabase/supabase-js'
 import { getHeader, type H3Event } from 'h3'
 import { toApiError } from './api-error'
 
-export function client(event: H3Event) {
+export function client(event: H3Event, access: 'authenticated' | 'anonymous' = 'authenticated') {
   const { supabaseUrl, supabaseKey } = useRuntimeConfig(event).public
   if (!supabaseUrl || !supabaseKey) {
     console.error('Supabase runtime configuration is missing')
     throw toApiError('internal', 503)
   }
-  const authorization = getHeader(event, 'authorization')
-  if (!authorization || !/^Bearer \S+$/i.test(authorization)) {
+  const authorization = access === 'authenticated' ? getHeader(event, 'authorization') : undefined
+  if (access === 'authenticated' && (!authorization || !/^Bearer \S+$/i.test(authorization))) {
     throw toApiError('unauthorized')
   }
   return createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false, autoRefreshToken: false },
-    global: { headers: { Authorization: authorization } }
+    global: { headers: authorization ? { Authorization: authorization } : {} }
   })
 }
 

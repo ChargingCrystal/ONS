@@ -1,0 +1,40 @@
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '17 7 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check deployed database health
+        shell: bash
+        env:
+          HEALTH_URL: ${{ vars.HEALTH_URL }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$HEALTH_URL" ]]; then
+            echo '::error::Set the HEALTH_URL repository variable to the deployed /api/health URL.'
+            exit 1
+          fi
+
+          body=$(mktemp)
+          trap 'rm -f "$body"' EXIT
+          status=$(curl --silent --show-error --proto '=https' --max-time 20 \
+            --header 'Accept: application/json' --output "$body" --write-out '%{http_code}' -- "$HEALTH_URL")
+
+          if [[ "$status" != 200 ]]; then
+            echo "::error::Health check returned HTTP $status."
+            exit 1
+          fi
+
+          if ! jq -e -s 'length == 1 and .[0] == {"status":"ok"}' "$body" > /dev/null 2>&1; then
+            echo '::error::Health check returned an unexpected response.'
+            exit 1
+          fi

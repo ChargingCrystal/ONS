@@ -13,7 +13,7 @@ supabase migration up --local
 cp .env.example .env
 ```
 
-Copy the public or anon key from `supabase status` to `NUXT_PUBLIC_SUPABASE_KEY` and start the app with `npm run dev`. Local Auth allows test signups without email confirmation. The home page links to the process health check.
+Copy the public or anon key from `supabase status` to `NUXT_PUBLIC_SUPABASE_KEY` and start the app with `npm run dev`. Local Auth allows test signups without email confirmation. The home page links to the database health check.
 
 For a new hosted Supabase project, apply all SQL migrations in numerical order. Set the public Supabase URL and key in Vercel, allow the app's HTTPS origin in Supabase Auth URL Configuration, and enable email confirmation for public signups. To enable Google login, configure the Google provider in Supabase Auth and register the callback URL shown there in the Google Console.
 
@@ -50,7 +50,7 @@ Send `Authorization: Bearer <access_token>` on authenticated routes and `Accept:
 
 | Method and path | Auth | Request | Success | Error codes |
 | --- | --- | --- | --- | --- |
-| `GET /api/health` | Public | — | `200` with process status `{"status":"ok"}` | `internal` |
+| `GET /api/health` | Public | — | `200` with `{"status":"ok"}` after a Supabase database round trip | `503 internal` if the probe fails or times out |
 | `GET /api/space` | Bearer | — | `200` with `id`, `invite`, and `members`, or `204` when unpaired | `unauthorized`, `internal` |
 | `POST /api/space` | Bearer | — | `200` with the new space `id` | `already_paired`, `unauthorized`, `internal` |
 | `POST /api/space/join` | Bearer | JSON `code`, 32 lowercase hex characters | `200` with the joined space `id`. Joining consumes the invite. | `invite_invalid`, `already_paired`, `validation_failed`, `unauthorized`, `internal` |
@@ -64,6 +64,12 @@ Send `Authorization: Bearer <access_token>` on authenticated routes and `Accept:
 | `GET /api/photos` | Bearer | Optional `offset` | `200` with up to 30 uploads newest first, with signed URLs valid for five minutes | `validation_failed`, `no_space`, `unauthorized`, `internal` |
 | `POST /api/photos` | Bearer | Raw JPEG, PNG, or WebP bytes with matching `Content-Type`, up to 5 MiB in Nitro | `200` with Storage `id`, `path`, and `fullPath` | `validation_failed`, `no_space`, `unauthorized`, `internal` |
 | `DELETE /api/photos/:name` | Bearer | UUID `name` from the gallery | `204`, including when the name is absent from the caller's gallery | `validation_failed`, `no_space`, `unauthorized`, `internal` |
+
+### Database health and keep-alive
+
+Apply migration `007` before deploying the updated health endpoint. Both healthy and degraded responses send `Cache-Control: no-store`. A degraded check returns `503` with `data.code` set to `internal`.
+
+In GitHub, go to **Settings → Secrets and variables → Actions → Variables → New repository variable**. Set `HEALTH_URL` to `https://<app-domain>/api/health` using the public deployment's domain. After the workflow reaches the default branch, run **Actions → Supabase keep-alive → Run workflow** to verify the setup. The schedule checks the endpoint daily at 07:17 UTC.
 
 ### Date category keys
 

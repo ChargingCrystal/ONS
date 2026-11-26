@@ -26,6 +26,7 @@ function callbackUrl() {
 
 export const useSessionStore = defineStore('session', () => {
   const auth = useSupabaseAuth()
+  const isProviderEnabled = useProviderCheck()
 
   const status = ref<SessionStatus>('unknown')
   const user = ref<{ id: string, email: string | undefined } | null>(null)
@@ -135,8 +136,24 @@ export const useSessionStore = defineStore('session', () => {
     return 'signedIn' as const
   }
 
+  // Checked before leaving the app, because afterwards Supabase shows errors itself.
+  async function requireProvider(provider: 'google') {
+    let enabled: boolean
+    try {
+      enabled = await isProviderEnabled(provider)
+    }
+    catch {
+      throw new AuthFailure('network')
+    }
+    if (!enabled) {
+      throw new AuthFailure('provider_disabled')
+    }
+  }
+
   async function signInWithGoogle() {
-    const { error } = await requireAuth().signInWithOAuth({
+    const client = requireAuth()
+    await requireProvider('google')
+    const { error } = await client.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: callbackUrl() },
     })

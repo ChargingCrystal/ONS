@@ -46,6 +46,25 @@ beforeEach(async () => {
     grant usage on schema storage to authenticated;
     grant select on storage.buckets to authenticated;
     grant select, insert, delete on storage.objects to authenticated;
+
+    create schema realtime;
+    create table realtime.messages (
+      topic text not null,
+      extension text not null,
+      event text,
+      payload jsonb,
+      private boolean not null default true
+    );
+    alter table realtime.messages enable row level security;
+    grant usage on schema realtime to anon, authenticated;
+    grant select, insert on realtime.messages to anon, authenticated;
+    create function realtime.topic() returns text language sql stable as
+      $$select nullif(current_setting('realtime.topic', true), '')$$;
+    create function realtime.send(payload jsonb, event text, topic text, private boolean)
+    returns void language sql as $$
+      insert into realtime.messages(payload, event, topic, private, extension)
+      values (payload, event, topic, private, 'broadcast')
+    $$;
   `)
   users = (await pg.query('select id from auth.users order by id')).rows
 }, 15_000)
@@ -69,6 +88,104 @@ afterEach(async () => {
 })
 
 const login = i => pg.query("select set_config('request.jwt.claim.sub',$1,false)", [users[i].id])
+
+const userTopic = index => 'ons:user:' + users[index].id
+const setTopic = topic => pg.query("select set_config('realtime.topic',$1,false)", [topic])
+
+async function pairForRealtime() {
+  await migrate()
+  await login(0)
+  await pg.query('select create_space()')
+  const { invite } = (await pg.query('select invite from spaces')).rows[0]
+  await login(1)
+  await pg.query('select join_space($1)', [invite])
+  await login(2)
+  await pg.query('select create_space()')
+  await login(0)
+}
+
+async function assertBroadcast(event, recipients) {
+  await pg.exec('reset role')
+  const { rows } = await pg.query('select topic, event, payload, private from realtime.messages order by topic')
+  assert.deepEqual(rows, recipients.map(index => ({ topic: userTopic(index), event, payload: {}, private: true })))
+  await pg.exec('delete from realtime.messages; set role authenticated')
+}
+
+test('Realtime grants only owner access to private Broadcast topics and denies client sends', async () => {
+  await migrate()
+  await pg.exec('reset role')
+  await pg.query("insert into realtime.messages(topic, extension) values ($1, 'broadcast'), ($1, 'presence')", [userTopic(0)])
+  await pg.exec('set role authenticated')
+  await login(0)
+  await setTopic(userTopic(0))
+  assert.deepEqual((await pg.query('select extension from realtime.messages')).rows, [{ extension: 'broadcast' }])
+  await assert.rejects(pg.query("insert into realtime.messages(topic, extension) values ($1, 'broadcast')", [userTopic(0)]), { code: '42501' })
+  await setTopic(userTopic(1))
+  assert.deepEqual((await pg.query('select extension from realtime.messages')).rows, [])
+  await login(2)
+  await setTopic(userTopic(0))
+  assert.deepEqual((await pg.query('select extension from realtime.messages')).rows, [])
+  await pg.exec('set role anon')
+  assert.deepEqual((await pg.query('select extension from realtime.messages')).rows, [])
+})
+
+test('Realtime emits empty private refresh signals for date, location and photo changes to both partners only', async () => {
+  await pairForRealtime()
+  for (const sql of [
+    "insert into dates(title, category) values ('Private title', 'movie')",
+    "update dates set status = 'done'",
+    'delete from dates',
+  ]) {
+    await pg.query(sql)
+    await assertBroadcast('dates.changed', [0, 1])
+  }
+  for (const sql of [
+    'insert into locations(lat, lon) values (52, 12)',
+    'update locations set lat = 53',
+    'select delete_my_location()',
+  ]) {
+    await pg.query(sql)
+    await assertBroadcast('locations.changed', [0, 1])
+  }
+
+  const { uploadId, path } = (await pg.query("select reserve_photo_upload('image/png', 10) as data")).rows[0].data
+  await pg.query("insert into storage.objects(bucket_id, name, metadata) values ('gallery', $1, $2)", [path, { size: 10, mimetype: 'image/png' }])
+  await assertBroadcast('photos.changed', [])
+  await pg.query('select confirm_photo($1)', [uploadId])
+  await assertBroadcast('photos.changed', [0, 1])
+  await pg.exec('reset role')
+  await pg.query('update photos set uploaded_by = null where id = $1', [uploadId])
+  await assertBroadcast('photos.changed', [0, 1])
+  await pg.query("delete from storage.objects where bucket_id = 'gallery' and name = $1", [path])
+  await pg.query('select forget_photo($1)', [uploadId])
+  await assertBroadcast('photos.changed', [0, 1])
+})
+
+test('Realtime stops routing space changes to a former partner and rolls back aborted notifications', async () => {
+  await pairForRealtime()
+  await login(1)
+  await pg.query('insert into locations(lat, lon) values (52, 12)')
+  await assertBroadcast('locations.changed', [0, 1])
+  await pg.query('select leave_space()')
+  await assertBroadcast('locations.changed', [0])
+
+  await login(0)
+  await pg.exec("begin; insert into dates(title, category) values ('Canceled', 'movie'); rollback")
+  await assertBroadcast('dates.changed', [])
+  await pg.query("insert into dates(title, category) values ('New plan', 'movie')")
+  await assertBroadcast('dates.changed', [0])
+})
+
+test('a user cannot forge notifications by reusing the Realtime trigger on a temporary table', async () => {
+  await pairForRealtime()
+  await pg.exec(`
+    create temp table spoof(space_id uuid);
+    create trigger forge_broadcast after insert on spoof
+      for each row execute function public.broadcast_space_change();
+  `)
+  await assert.rejects(pg.query('insert into spoof values (public.my_space())'), { code: '42501' })
+  await assertBroadcast('spoof.changed', [])
+})
 
 test('reserves the maximum upload size before allocating signed paths', async () => {
   await migrate()

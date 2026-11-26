@@ -19,7 +19,8 @@ Course milestones: working prototype for Business Angel Meeting II (December), p
 - Supabase: Postgres, Auth (email/password, Google), private Storage
 - Deployment target: Vercel (app) + Supabase (backend services), free tiers
 - Backend prototype exists and is being hardened (see `docs/BACKLOG.md`).
-  The frontend has an app shell (layout, navigation, design tokens, DE/EN/NL); the feature pages are placeholders.
+  The frontend has an app shell (layout, navigation, design tokens, DE/EN/NL) and sign-in (F2); the feature pages
+  are placeholders.
 - Frontend stack from `docs/Lastenheft_Ons.md`: Pinia, `@nuxtjs/i18n` (DE/EN/NL), Tailwind or UnoCSS,
   Leaflet or MapLibre, Chart.js or ECharts. The frontend dev decides between the "or" options and records the
   choice here. A new dependency goes in `package.json`, a shared file: say why in the PR description.
@@ -27,7 +28,10 @@ Course milestones: working prototype for Business Angel Meeting II (December), p
   variables, so the look can be changed without knowing Tailwind (see Frontend rules).
 - Decided: `@nuxtjs/i18n` is pinned to exactly **10.2.3**. Later releases require `vue-router` 5, while Nuxt 3.21
   ships version 4. Do not upgrade it without moving to a Nuxt version that matches.
-- Not installed yet: Pinia, the map library and the chart library.
+- Decided: **Pinia** (`pinia` 3 with `@pinia/nuxt` 0.11) holds client state, starting with the session.
+- Decided: **rendering.** Only the landing page (`/`, `/en`, `/nl`) is rendered on the server. Every other page is
+  rendered in the browser (`routeRules` in `nuxt.config.ts`), because the Supabase session is stored there.
+- Not installed yet: the map library and the chart library.
 
 ## Ownership (who works where)
 
@@ -104,6 +108,9 @@ no mocking of the unit under test. Keep tests fast and independent of each other
 Vitest is the single runner for unit, component and database tests (`npm test`). Playwright for E2E is not set up yet.
 Backend tests live in `tests/`. Frontend tests live in `__tests__/` folders next to the code: `*.nuxt.spec.ts`
 runs inside a Nuxt runtime, other `*.spec.ts` files run in plain Node (see `vitest.config.ts`).
+Shared test helpers live in `composables/__tests__/` (for example `fake-auth.ts`, an in-memory Supabase Auth).
+Put only spec files into `pages/__tests__/` and `components/__tests__/`: Nuxt would register other files there as
+pages or components.
 "Done" always includes: new behavior has a test, and `npm test` and `npm run build` pass.
 
 ## Backend rules (do not break these)
@@ -147,6 +154,14 @@ Rule 1 applies to everyone, including the frontend.
 - **Date categories** are fixed keys from `shared/date-categories.ts`; their labels come from i18n by key.
 - Auth: the Supabase client is provided as `useNuxtApp().$supabase` (client only, see `plugins/auth.client.ts`).
   Protect pages with route middleware, not with `v-if` in components.
+  - `middleware/auth.global.ts` protects **every** page. A page opts out with
+    `definePageMeta({ access: 'public' })` or `access: 'guest'` (only for signed-out visitors).
+  - Reach Supabase Auth only through `useSupabaseAuth()`. The session state is in `stores/session.ts`.
+  - Call the API only through `useApi()` and show a failure with `t(error.messageKey)`.
+  - A `redirect` query value goes through `useReturnTarget()`, which only accepts paths inside the app.
+  - Google sign-in and confirmation emails return to `/auth/callback` (one address, no language prefix).
+  - `PASSWORD_MIN_LENGTH` in `composables/formRules.ts` must match `minimum_password_length` in
+    `supabase/config.toml` (not set there today, so the Supabase Auth default of 6 applies).
 
 ## Current data model
 

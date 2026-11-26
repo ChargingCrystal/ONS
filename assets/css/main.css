@@ -23,6 +23,8 @@
   --color-muted: var(--ons-color-muted);
   --color-accent: var(--ons-color-accent);
   --color-on-accent: var(--ons-color-on-accent);
+  --color-danger: var(--ons-color-danger);
+  --color-field: var(--ons-color-field);
 
   --font-*: initial;
   --font-heading: var(--ons-font-heading);

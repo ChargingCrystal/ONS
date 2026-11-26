@@ -18,6 +18,8 @@
   --palette-sand-50: #fbf7f2;
   --palette-sand-200: #e8ded2;
   --palette-sand-300: #cdbfb0;
+  --palette-sand-600: #8a7c6c;
+  --palette-ink-400: #8c8196;
   --palette-ink-500: #645a6b;
   --palette-ink-700: #4a3f55;
   --palette-ink-800: #2c2434;
@@ -26,6 +28,8 @@
   --palette-plum-700: #7a3468;
   --palette-blue-300: #8ec5ff;
   --palette-blue-700: #1c5fb8;
+  --palette-red-300: #ffb4ab;
+  --palette-red-700: #a3261d;
 
   /* 2. Colour roles: light-dark(light theme, dark theme). */
   /* Page background */
@@ -44,6 +48,10 @@
   --ons-color-on-accent: light-dark(var(--palette-white), var(--palette-ink-900));
   /* Keyboard focus ring */
   --ons-color-focus: light-dark(var(--palette-blue-700), var(--palette-blue-300));
+  /* Error messages and the border of an invalid field */
+  --ons-color-danger: light-dark(var(--palette-red-700), var(--palette-red-300));
+  /* Border of form fields and outlined buttons */
+  --ons-color-field: light-dark(var(--palette-sand-600), var(--palette-ink-400));
 
   /* 3. Typography. System fonts until the brand typefaces are chosen. */
   --ons-font-heading: ui-serif, Georgia, 'Times New Roman', serif;

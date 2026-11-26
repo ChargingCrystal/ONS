@@ -4,7 +4,7 @@
   },
   "nav": {
     "label": "Hoofdnavigatie",
-    "home": "Home",
+    "dashboard": "Overzicht",
     "dates": "Dates",
     "map": "Kaart",
     "photos": "Foto's"
@@ -32,6 +32,67 @@
     },
     "photos": {
       "title": "Foto's"
+    },
+    "dashboard": {
+      "title": "Overzicht"
+    },
+    "login": {
+      "title": "Inloggen"
+    },
+    "register": {
+      "title": "Account aanmaken"
+    },
+    "callback": {
+      "title": "Inloggen"
+    }
+  },
+  "errors": {
+    "unexpected": "Er is iets misgegaan. Probeer het opnieuw.",
+    "network": "De server is niet bereikbaar. Controleer je internetverbinding en probeer het opnieuw.",
+    "api": {
+      "inviteInvalid": "Deze uitnodiging is ongeldig of al gebruikt.",
+      "alreadyPaired": "Je hoort al bij een gedeelde ruimte.",
+      "noSpace": "Maak eerst een gedeelde ruimte aan of sluit je bij een aan.",
+      "notFound": "Dit item is niet gevonden.",
+      "validationFailed": "Controleer je invoer.",
+      "unauthorized": "Je sessie is verlopen. Log opnieuw in.",
+      "internal": "De server heeft nu een probleem. Probeer het later opnieuw."
+    },
+    "auth": {
+      "invalidCredentials": "Het e-mailadres of wachtwoord klopt niet.",
+      "emailNotConfirmed": "Bevestig eerst je e-mailadres via de link die we je hebben gestuurd.",
+      "userExists": "Er bestaat al een account voor dit e-mailadres. Log in plaats daarvan in.",
+      "emailInvalid": "Dit e-mailadres wordt niet geaccepteerd.",
+      "weakPassword": "Dit wachtwoord is te zwak. Kies een langer wachtwoord.",
+      "signupDisabled": "Nieuwe registraties zijn op dit moment niet mogelijk.",
+      "methodDisabled": "Deze manier van inloggen is nu niet beschikbaar.",
+      "rejected": "Het inloggen is geweigerd. Controleer je invoer.",
+      "tooManyAttempts": "Te veel pogingen. Wacht even en probeer het opnieuw.",
+      "unavailable": "Inloggen is op dit moment niet beschikbaar."
+    },
+    "form": {
+      "emailRequired": "Vul je e-mailadres in.",
+      "emailInvalid": "Dit is geen geldig e-mailadres.",
+      "passwordRequired": "Vul je wachtwoord in.",
+      "passwordTooShort": "Het wachtwoord moet minstens {min} tekens hebben."
+    }
+  },
+  "auth": {
+    "email": "E-mailadres",
+    "password": "Wachtwoord",
+    "passwordHint": "Minstens {min} tekens.",
+    "signIn": "Inloggen",
+    "createAccount": "Account aanmaken",
+    "google": "Doorgaan met Google",
+    "noAccount": "Nog geen account? Maak er een aan",
+    "haveAccount": "Heb je al een account? Log in",
+    "confirmationSent": "Bijna klaar: we hebben een bevestigingslink naar {email} gestuurd. Open die het liefst in deze browser.",
+    "signOut": "Uitloggen",
+    "callback": {
+      "working": "Het inloggen wordt afgerond …",
+      "rejected": "Het inloggen is geannuleerd of geweigerd.",
+      "incomplete": "We konden je niet automatisch inloggen. Heb je net je e-mailadres bevestigd? Log dan nu gewoon in.",
+      "toLogin": "Naar inloggen"
     }
   }
 }

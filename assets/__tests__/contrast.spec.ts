@@ -51,9 +51,14 @@ const pairs: [string, string, number][] = [
   ['accent', 'canvas', 4.5],
   ['accent', 'surface', 4.5],
   ['on-accent', 'accent', 4.5],
-  // Focus rings are not text, so 3:1 is enough.
+  // Error messages are text.
+  ['danger', 'canvas', 4.5],
+  ['danger', 'surface', 4.5],
+  // Focus rings and the borders of form fields are not text, so 3:1 is enough.
   ['focus', 'canvas', 3],
   ['focus', 'surface', 3],
+  ['field', 'canvas', 3],
+  ['field', 'surface', 3],
 ]
 
 describe('design tokens', () => {

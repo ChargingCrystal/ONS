@@ -4,7 +4,7 @@ const { t } = useI18n()
 
 // The main pages. To plug in a new one, add its file in pages/ and one entry here.
 const items = [
-  { to: '/', label: 'nav.home' },
+  { to: '/dashboard', label: 'nav.dashboard' },
   { to: '/dates', label: 'nav.dates' },
   { to: '/map', label: 'nav.map' },
   { to: '/photos', label: 'nav.photos' },

@@ -3,7 +3,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineNuxtConfig({
   compatibilityDate: '2025-01-01',
   devtools: { enabled: false },
-  modules: ['@nuxtjs/i18n'],
+  modules: ['@nuxtjs/i18n', '@pinia/nuxt'],
   css: ['~/assets/css/main.css'],
   vite: { plugins: [tailwindcss()] },
   i18n: {
@@ -16,6 +16,13 @@ export default defineNuxtConfig({
       { code: 'en', language: 'en-GB', name: 'English', file: 'en.json' },
       { code: 'nl', language: 'nl-NL', name: 'Nederlands', file: 'nl.json' },
     ],
+    // Pages without language prefixes are listed here. The route macro in the page itself
+    // breaks the build on Linux.
+    customRoutes: 'config',
+    pages: {
+      // Supabase only returns to addresses on its allow list, so there is just /auth/callback.
+      'auth/callback': false,
+    },
     // First visit: browser language, otherwise German. Later visits: the saved cookie.
     detectBrowserLanguage: {
       useCookie: true,
@@ -23,6 +30,14 @@ export default defineNuxtConfig({
       redirectOn: 'no prefix',
       fallbackLocale: 'de',
     },
+  },
+  // The sign-in session lives in the browser, so pages are rendered there.
+  // Only the public landing page is rendered on the server, for search engines.
+  routeRules: {
+    '/**': { ssr: false },
+    '/': { ssr: true },
+    '/en': { ssr: true },
+    '/nl': { ssr: true },
   },
   runtimeConfig: { public: { supabaseUrl: '', supabaseKey: '' } }
 })

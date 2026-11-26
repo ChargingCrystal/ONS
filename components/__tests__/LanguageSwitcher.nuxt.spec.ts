@@ -1,6 +1,11 @@
-import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { createFakeAuth } from '../../composables/__tests__/fake-auth'
+import { resetSession } from '../../composables/__tests__/reset-session'
 import LanguageSwitcher from '../LanguageSwitcher.vue'
+
+const supabase = vi.hoisted(() => ({ auth: undefined as unknown }))
+mockNuxtImport('useSupabaseAuth', () => () => supabase.auth)
 
 // Reads the saved language from the cookie that the server will see on the next visit.
 function savedLanguage() {
@@ -8,7 +13,10 @@ function savedLanguage() {
 }
 
 // Every test starts on the German home page.
+// Somebody is signed in, because some tests visit protected pages.
 beforeEach(async () => {
+  supabase.auth = createFakeAuth({ signedInAs: 'ann@example.org' }).auth
+  resetSession()
   await useNuxtApp().$i18n.setLocale('de')
   await useRouter().push('/')
 })

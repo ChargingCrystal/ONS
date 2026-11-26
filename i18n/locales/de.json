@@ -4,7 +4,7 @@
   },
   "nav": {
     "label": "Hauptnavigation",
-    "home": "Start",
+    "dashboard": "Übersicht",
     "dates": "Dates",
     "map": "Karte",
     "photos": "Fotos"
@@ -32,6 +32,67 @@
     },
     "photos": {
       "title": "Fotos"
+    },
+    "dashboard": {
+      "title": "Übersicht"
+    },
+    "login": {
+      "title": "Anmelden"
+    },
+    "register": {
+      "title": "Registrieren"
+    },
+    "callback": {
+      "title": "Anmeldung"
+    }
+  },
+  "errors": {
+    "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    "network": "Keine Verbindung zum Server. Prüfe deine Internetverbindung und versuche es erneut.",
+    "api": {
+      "inviteInvalid": "Diese Einladung ist ungültig oder wurde schon benutzt.",
+      "alreadyPaired": "Du gehörst bereits zu einem gemeinsamen Bereich.",
+      "noSpace": "Erstelle zuerst einen gemeinsamen Bereich oder tritt einem bei.",
+      "notFound": "Dieser Eintrag wurde nicht gefunden.",
+      "validationFailed": "Bitte prüfe deine Eingaben.",
+      "unauthorized": "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an.",
+      "internal": "Der Server hat gerade ein Problem. Bitte versuche es später erneut."
+    },
+    "auth": {
+      "invalidCredentials": "E-Mail-Adresse oder Passwort ist falsch.",
+      "emailNotConfirmed": "Bitte bestätige zuerst deine E-Mail-Adresse über den Link in unserer E-Mail.",
+      "userExists": "Für diese E-Mail-Adresse gibt es schon ein Konto. Melde dich stattdessen an.",
+      "emailInvalid": "Diese E-Mail-Adresse wird nicht akzeptiert.",
+      "weakPassword": "Dieses Passwort ist zu schwach. Wähle ein längeres.",
+      "signupDisabled": "Neue Registrierungen sind derzeit nicht möglich.",
+      "methodDisabled": "Diese Anmeldeart ist derzeit nicht verfügbar.",
+      "rejected": "Die Anmeldung wurde abgelehnt. Bitte prüfe deine Eingaben.",
+      "tooManyAttempts": "Zu viele Versuche. Bitte warte kurz und versuche es erneut.",
+      "unavailable": "Die Anmeldung ist derzeit nicht verfügbar."
+    },
+    "form": {
+      "emailRequired": "Bitte gib deine E-Mail-Adresse ein.",
+      "emailInvalid": "Das ist keine gültige E-Mail-Adresse.",
+      "passwordRequired": "Bitte gib dein Passwort ein.",
+      "passwordTooShort": "Das Passwort braucht mindestens {min} Zeichen."
+    }
+  },
+  "auth": {
+    "email": "E-Mail-Adresse",
+    "password": "Passwort",
+    "passwordHint": "Mindestens {min} Zeichen.",
+    "signIn": "Anmelden",
+    "createAccount": "Konto erstellen",
+    "google": "Mit Google fortfahren",
+    "noAccount": "Noch kein Konto? Registrieren",
+    "haveAccount": "Schon ein Konto? Anmelden",
+    "confirmationSent": "Fast geschafft: Wir haben einen Bestätigungslink an {email} geschickt. Öffne ihn am besten in diesem Browser.",
+    "signOut": "Abmelden",
+    "callback": {
+      "working": "Anmeldung wird abgeschlossen …",
+      "rejected": "Die Anmeldung wurde abgebrochen oder abgelehnt.",
+      "incomplete": "Wir konnten dich nicht automatisch anmelden. Wenn du gerade deine E-Mail-Adresse bestätigt hast, melde dich jetzt einfach an.",
+      "toLogin": "Zur Anmeldung"
     }
   }
 }

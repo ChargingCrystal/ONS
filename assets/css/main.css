@@ -23,6 +23,8 @@
   --color-muted: var(--ons-color-muted);
   --color-accent: var(--ons-color-accent);
   --color-on-accent: var(--ons-color-on-accent);
+  --color-danger: var(--ons-color-danger);
+  --color-field: var(--ons-color-field);
 
   --font-*: initial;
   --font-heading: var(--ons-font-heading);
@@ -65,6 +67,7 @@
 
   --container-*: initial;
   --container-content: var(--ons-size-content);
+  --container-form: var(--ons-size-form);
 }
 
 /*
@@ -90,6 +93,11 @@
 
 @utility min-h-nav {
   min-height: var(--ons-size-nav);
+}
+
+/* For buttons that are waiting, as in disabled:faded. */
+@utility faded {
+  opacity: var(--ons-opacity-disabled);
 }
 
 /* Draws the focus ring inside the element, for items that touch the screen edge. */

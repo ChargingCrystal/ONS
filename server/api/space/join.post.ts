@@ -1,5 +1,7 @@
-import { z } from 'zod'
-export default defineEventHandler(async event => {
-  const body = await readValidatedBody(event, z.strictObject({ code: z.string().regex(/^[a-f0-9]{32}$/) }).parse)
-  return { id: result(await client(event).rpc('join_space', body)) }
+import { defineApiHandler } from '../../utils/api-error'
+import { joinSpaceRequestSchema } from '../../../shared/api-contract'
+
+export default defineApiHandler(async event => {
+  const body = await readValidatedBody(event, joinSpaceRequestSchema.parse)
+  return { id: result(await client(event).rpc('join_space', body), 'joinSpace') }
 })

@@ -1,8 +1,10 @@
-import { z } from 'zod'
-export default defineEventHandler(async event => {
+import { photosQuerySchema } from '../../../shared/api-contract'
+import { defineApiHandler } from '../../utils/api-error'
+
+export default defineApiHandler(async event => {
   const db = client(event)
   const space = await room(db)
-  const { offset } = await getValidatedQuery(event,z.object({offset:z.coerce.number().int().nonnegative().default(0)}).parse)
+  const { offset } = await getValidatedQuery(event, photosQuerySchema.parse)
   const gallery = db.storage.from('gallery')
   const files = result(await gallery.list(space,{offset,limit:30,sortBy:{column:'created_at',order:'desc'}})) ?? []
   if (!files.length) return []

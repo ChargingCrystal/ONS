@@ -1,10 +1,10 @@
 # Ons · Couple Planner
 
-Nuxt 3 mit Nitro-API und Supabase (Postgres, Auth, privater Storage). Alle Zugriffe laufen mit dem Token des angemeldeten Partners und den Row-Level-Security-Regeln der Datenbank.
+Ons is a Nuxt 3 app with a Nitro API and Supabase Postgres, Auth, and private Storage. The API forwards the signed-in user's token to Supabase, where row-level security controls data access.
 
-## Lokal starten
+## Local setup
 
-Node 22.12 oder neuer, Docker und Supabase CLI installieren. Im Repository:
+Install Node 22.12 or later, Docker, and the Supabase CLI. From the repository root, run:
 
 ```sh
 npm ci
@@ -13,15 +13,15 @@ supabase migration up --local
 cp .env.example .env
 ```
 
-Den von `supabase status` ausgegebenen Publishable- bzw. anon-Key in `NUXT_PUBLIC_SUPABASE_KEY` eintragen. Mit `npm run dev` starten. Der lokale Auth-Dienst erlaubt Testkonten ohne Bestätigungsmail. Die Startseite verlinkt den Healthcheck.
+Copy the public or anon key from `supabase status` to `NUXT_PUBLIC_SUPABASE_KEY` and start the app with `npm run dev`. Local Auth allows test signups without email confirmation. The home page links to the process health check.
 
-Alternativ beide SQL-Migrationen in numerischer Reihenfolge im SQL Editor eines neuen Supabase-Projekts ausführen und dessen URL und öffentlichen Schlüssel eintragen. Für Vercel dieselben zwei Variablen konfigurieren, die HTTPS-Adresse in Supabase unter Auth → URL Configuration freigeben und E-Mail-Bestätigung für öffentliche Registrierungen aktivieren. Für Google-Login den Google-Provider mit Client-ID und Secret im Supabase-Dashboard aktivieren und die dort angezeigte Callback-URL in der Google-Konsole hinterlegen.
+For a new hosted Supabase project, apply both SQL migrations in numerical order. Set the public Supabase URL and key in Vercel, allow the app's HTTPS origin in Supabase Auth URL Configuration, and enable email confirmation for public signups. To enable Google login, configure the Google provider in Supabase Auth and register the callback URL shown there in the Google Console.
 
-## Auth und Demoablauf
+## Auth and demo
 
-Das Nuxt-Client-Plugin stellt den Supabase-Client als `useNuxtApp().$supabase` bereit. Registrierung über `auth.signUp({ email, password })`, Login über `auth.signInWithPassword({ email, password })`, Google über `auth.signInWithOAuth({ provider: 'google' })`, Logout über `auth.signOut()`. Supabase Auth übernimmt Passwortverarbeitung, Session-Erneuerung und Auth-Rate-Limits. Für jeden Nitro-Aufruf den aktuellen Access Token als `Authorization: Bearer <access_token>` senden.
+The Nuxt plugin exposes the browser Supabase client as `useNuxtApp().$supabase`. Use `auth.signUp({ email, password })`, `auth.signInWithPassword({ email, password })`, `auth.signInWithOAuth({ provider: 'google' })`, and `auth.signOut()`. Supabase Auth handles passwords, session refresh, and rate limits. Send the current access token on protected Nitro calls.
 
-Für einen lokalen Durchlauf ohne Frontend in Bash (curl und jq):
+This local demo uses Bash, curl, and jq.
 
 ```sh
 source .env
@@ -39,28 +39,55 @@ api() {
 api "$A" space -X POST
 CODE=$(api "$A" space | jq -r .invite)
 api "$B" space/join -d "$(jq -nc --arg code "$CODE" '{code:$code}')"
-api "$A" dates -d '{"title":"Kinoabend","category":"cinema","meeting_at":"2027-01-15T18:00:00Z"}'
+api "$A" dates -d '{"title":"Movie night","category":"cinema","meeting_at":"2027-01-15T18:00:00Z"}'
 api "$B" dates
 api "$B" dashboard
 ```
 
 ## API
 
-| Methode und Pfad unter /api | Inhalt |
-| --- | --- |
-| GET /health | Prozessstatus, ohne Login |
-| GET /space | Eigener Raum, Mitglieder und offener Einladungscode, sonst null |
-| POST /space · POST /space/join | Raum anlegen oder mit JSON-Feld code beitreten. Ein Konto pro Person, maximal zwei Mitglieder. Beitritt verbraucht den Code. |
-| POST /dates | title, category, optional status (planned/done) und meeting_at (ISO-Zeit mit Zeitzone oder null) |
-| GET /dates | q (Titelsuche), category, status, sort (created_at/title/meeting_at), order (asc/desc), offset. 50 Ideen je Seite. |
-| PATCH /dates/:id · DELETE /dates/:id | Gemeinsame Idee ändern oder löschen |
-| PUT /location | Eigenen Standort als lat und lon setzen |
-| GET /location | Standorte, Luftlinie in km und geografischer Mittelpunkt. Fehlende Werte werden als null geliefert. |
-| GET /dashboard | Nächstes geplantes Treffen, Serverzeit für den Countdown und Anzahl der Ideen nach Erstellmonat (UTC) und Kategorie |
-| POST /photos | Bild als binären Request-Body senden. Content-Type image/jpeg, image/png oder image/webp, maximal 5 MiB (Hosting-Limit kann niedriger liegen). |
-| GET /photos | Neueste Uploads zuerst, 30 pro Seite, optional offset. Bild-URLs sind fünf Minuten gültig. |
-| DELETE /photos/:name | Foto anhand des von der Galerie gelieferten Namens löschen |
+Send `Authorization: Bearer <access_token>` on authenticated routes and `Accept: application/json` to request JSON errors. The request and response schemas and their TypeScript types are exported from [shared/api-contract.ts](shared/api-contract.ts). The error schema and `ApiErrorCode` are exported from [shared/api-errors.ts](shared/api-errors.ts).
 
-## Prüfung
+| Method and path | Auth | Request | Success | Error codes |
+| --- | --- | --- | --- | --- |
+| `GET /api/health` | Public | — | `200` with process status `{"status":"ok"}` | `internal` |
+| `GET /api/space` | Bearer | — | `200` with `id`, `invite`, and `members`, or `204` when unpaired | `unauthorized`, `internal` |
+| `POST /api/space` | Bearer | — | `200` with the new space `id` | `already_paired`, `unauthorized`, `internal` |
+| `POST /api/space/join` | Bearer | JSON `code`, 32 lowercase hex characters | `200` with the joined space `id`. Joining consumes the invite. | `invite_invalid`, `already_paired`, `validation_failed`, `unauthorized`, `internal` |
+| `GET /api/dates` | Bearer | Optional `q`, `category`, `status`, `sort`, `order`, `offset` | `200` with up to 50 date rows | `validation_failed`, `unauthorized`, `internal` |
+| `POST /api/dates` | Bearer | JSON `title`, `category`, optional `status` and `meeting_at` | `200` with the created date row | `validation_failed`, `no_space`, `unauthorized`, `internal` |
+| `PATCH /api/dates/:id` | Bearer | UUID `id` and at least one writable date field | `200` with the updated date row | `validation_failed`, `not_found`, `unauthorized`, `internal` |
+| `DELETE /api/dates/:id` | Bearer | UUID `id` | `204` | `validation_failed`, `not_found`, `unauthorized`, `internal` |
+| `GET /api/location` | Bearer | — | `200` with `partners`, `distanceKm`, and `midpoint`. Unavailable derived values are null. | `unauthorized`, `internal` |
+| `PUT /api/location` | Bearer | JSON `lat` and `lon` | `200` with the saved location row | `validation_failed`, `no_space`, `unauthorized`, `internal` |
+| `GET /api/dashboard` | Bearer | — | `200` with `serverTime`, `nextMeeting`, and `categoriesByMonth` using UTC months | `unauthorized`, `internal` |
+| `GET /api/photos` | Bearer | Optional `offset` | `200` with up to 30 uploads newest first, with signed URLs valid for five minutes | `validation_failed`, `no_space`, `unauthorized`, `internal` |
+| `POST /api/photos` | Bearer | Raw JPEG, PNG, or WebP bytes with matching `Content-Type`, up to 5 MiB in Nitro | `200` with Storage `id`, `path`, and `fullPath` | `validation_failed`, `no_space`, `unauthorized`, `internal` |
+| `DELETE /api/photos/:name` | Bearer | UUID `name` from the gallery | `204`, including when the name is absent from the caller's gallery | `validation_failed`, `no_space`, `unauthorized`, `internal` |
 
-`npm test` prüft die erste Migration in eingebettetem Postgres mit simulierten Supabase-Identitäten. `npm run build` erstellt den Nitro-Produktionsbuild. Der Datenbanktest deckt Einmalcode, Raumgrenze, gemeinsam sichtbare Termine, Standortbesitz und die Trennung fremder Räume ab. Für einen vollständigen Integrationstest werden laufende Auth- und Storage-Dienste benötigt.
+### Error codes and statuses
+
+| `data.code` | HTTP | Meaning |
+| --- | --- | --- |
+| `invite_invalid` | 400 | The invite is unknown or already consumed. |
+| `already_paired` | 409 | The caller already belongs to a space. |
+| `no_space` | 403 | The operation requires the caller to belong to a space. |
+| `not_found` | 404 | The date is missing or outside the caller's visible rows. |
+| `validation_failed` | 400, 413, 415 | Input is invalid, an upload is too large, or the media type or signature is unsupported. |
+| `unauthorized` | 401 | The access token is missing or rejected. |
+| `internal` | 500, 503 | An unexpected server failure occurred or a dependency is unavailable. |
+
+A `PATCH /api/dates/not-a-uuid` request with `{"title":"Movie night"}` returns HTTP 400. The contract fields in the JSON response are:
+
+```json
+{
+  "statusCode": 400,
+  "data": { "code": "validation_failed" }
+}
+```
+
+Map `data.code` to a translated message and keep the `401` sign-in handling. Failures generated by infrastructure, such as a hosting upload limit, can arrive without this envelope. Use a generic translated fallback in that case.
+
+## Verification
+
+`npm test` runs Vitest, including PGlite tests for all migrations, geo unit tests, and HTTP contract tests with a simulated Supabase transport. `npm run build` creates the production Nitro build. Real Auth and Storage smoke test results are in [docs/SMOKE_TEST.md](docs/SMOKE_TEST.md).

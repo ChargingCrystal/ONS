@@ -1,1 +1,3 @@
-export default defineEventHandler(async event => result(await client(event).rpc('dashboard')))
+import { defineApiHandler } from '../utils/api-error'
+
+export default defineApiHandler(async event => result(await client(event).rpc('dashboard')))

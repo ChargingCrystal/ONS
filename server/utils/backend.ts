@@ -1,36 +1,56 @@
 import { createClient } from '@supabase/supabase-js'
-import type { H3Event } from 'h3'
-import { z } from 'zod'
+import { getHeader, type H3Event } from 'h3'
+import { toApiError } from './api-error'
 
 export function client(event: H3Event) {
   const { supabaseUrl, supabaseKey } = useRuntimeConfig(event).public
-  if (!supabaseUrl || !supabaseKey) throw createError({ statusCode: 503, statusMessage: 'Configure Supabase first' })
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Supabase runtime configuration is missing')
+    throw toApiError('internal', 503)
+  }
   const authorization = getHeader(event, 'authorization')
-  if (!authorization?.startsWith('Bearer ')) throw createError({ statusCode: 401 })
+  if (!authorization || !/^Bearer \S+$/i.test(authorization)) {
+    throw toApiError('unauthorized')
+  }
   return createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false, autoRefreshToken: false },
     global: { headers: { Authorization: authorization } }
   })
 }
 
-export function result<T>(response: { data: T, error: { code?: string, message: string } | null, status?: number }) {
-  if (response.error) {
-    const { code } = response.error
-    const statusCode = code === '23505' ? 409 : code === '22023' ? 400 : code === 'PGRST116' ? 404 : response.status || 500
-    throw createError({ statusCode, statusMessage: statusCode === 409 ? 'Already paired' : 'Request failed' })
+type SupabaseResult<T> = {
+  data: T
+  error: { code?: string; message: string; status?: number; statusCode?: string } | null
+  status?: number
+}
+
+export function result<T>(response: SupabaseResult<T>, operation?: 'createSpace' | 'joinSpace' | 'mutateDate') {
+  if (!response.error) {
+    return response.data
   }
-  return response.data
+
+  const { code, status, statusCode } = response.error
+  if (response.status === 401 || status === 401 || statusCode === '401') {
+    throw toApiError('unauthorized')
+  }
+  if (operation === 'joinSpace' && code === '22023') {
+    throw toApiError('invite_invalid')
+  }
+  if ((operation === 'joinSpace' || operation === 'createSpace') && code === '23505') {
+    throw toApiError('already_paired')
+  }
+  if (operation === 'mutateDate' && code === 'PGRST116') {
+    throw toApiError('not_found')
+  }
+
+  console.error('Unexpected Supabase request failure', response.error)
+  throw toApiError('internal', response.status === 503 || status === 503 || statusCode === '503' ? 503 : 500)
 }
 
 export async function room(db: ReturnType<typeof client>) {
   const id = result(await db.rpc('my_space'))
-  if (!id) throw createError({ statusCode: 403, statusMessage: 'Join or create a space first' })
+  if (!id) {
+    throw toApiError('no_space')
+  }
   return String(id)
 }
-
-export const dateFields = z.strictObject({
-  title: z.string().trim().min(1).max(160),
-  category: z.string().trim().min(1).max(60),
-  status: z.enum(['planned','done']).optional(),
-  meeting_at: z.iso.datetime({ offset: true }).nullable().optional()
-})

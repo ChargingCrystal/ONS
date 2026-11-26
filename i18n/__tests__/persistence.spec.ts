@@ -116,8 +116,12 @@ describe('app and sign-in pages', () => {
 
 describe('the sign-in return page', () => {
   // Supabase only returns to addresses on its allow list, so there is just one.
-  test('is not redirected to a language prefix', async () => {
-    const response = await visit('/auth/callback?code=abc', { saved: 'en', browser: 'en-GB' })
+  test.each([
+    ['a saved English choice', { saved: 'en', browser: 'en-GB' }],
+    ['a saved Dutch choice', { saved: 'nl' }],
+    ['a Dutch browser on the first visit', { browser: 'nl-NL' }],
+  ])('is not redirected to a language prefix: %s', async (_visitor, visitor) => {
+    const response = await visit('/auth/callback?code=abc', visitor)
     expect(response.status).toBe(200)
     expect(response.location).toBeNull()
   })

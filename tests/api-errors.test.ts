@@ -19,9 +19,9 @@ let origin: string
 const now = '2026-11-26T10:00:00+00:00'
 const coordinates = { lat: 52, lon: 12 }
 const partner = { user_id: id, ...coordinates }
-const date = { id, space_id: id, title: 'Cinema', category: 'film', status: 'planned', meeting_at: null, created_at: now }
+const date = { id, space_id: id, title: 'Cinema', category: 'movie', status: 'planned', meeting_at: null, created_at: now }
 const space = { id, invite, members: [{ user_id: id, slot: 1 }] }
-const dashboard = { serverTime: now, nextMeeting: null, categoriesByMonth: [{ month: '2026-11', category: 'film', total: 1 }] }
+const dashboard = { serverTime: now, nextMeeting: null, categoriesByMonth: [{ month: '2026-11', category: 'movie', total: 1 }] }
 const photo = { id, path: id + '/' + id, fullPath: 'gallery/' + id + '/' + id }
 
 beforeAll(async () => {
@@ -101,7 +101,7 @@ test.each(['/space', '/space/join'])('returns already_paired for membership conf
 })
 
 test.each([
-  ['POST', '/dates', { title: 'Cinema', category: 'film' }],
+  ['POST', '/dates', { title: 'Cinema', category: 'movie' }],
   ['PUT', '/location', { lat: 52, lon: 12 }],
 ] as const)('returns no_space for an unpaired %s %s', async (method, path, body) => {
   upstream.mockImplementation(async input => {
@@ -158,12 +158,27 @@ test('returns internal for unexpected upstream errors without claiming a pairing
 })
 
 test.each([
+  ['POST', '/dates', { title: 'Cinema', category: 'Kino' }],
+  ['PATCH', '/dates/' + id, { category: 'cinema' }],
+  ['GET', '/dates?category=film'],
+  ['GET', '/dates?category='],
+  ['GET', '/dates?category=%20movie%20'],
+] as const)('rejects a non-key category on %s %s before reaching Supabase', async (method, path, body) => {
+  if (method === 'POST') {
+    upstream.mockResolvedValueOnce(Response.json(id))
+  }
+  upstream.mockResolvedValueOnce(Response.json(method === 'GET' ? [] : date))
+  await expectError(await request(method, path, body ? JSON.stringify(body) : undefined), 400, 'validation_failed')
+  expect(upstream).not.toHaveBeenCalled()
+})
+
+test.each([
   { method: 'GET', path: '/health', schema: contract.healthResponseSchema, upstreamData: [] },
   { method: 'GET', path: '/space', schema: contract.spaceResponseSchema, upstreamData: [space] },
   { method: 'POST', path: '/space', schema: contract.spaceIdResponseSchema, upstreamData: [id] },
   { method: 'POST', path: '/space/join', schema: contract.spaceIdResponseSchema, upstreamData: [id], body: { code: invite } },
   { method: 'GET', path: '/dates', schema: contract.datesResponseSchema, upstreamData: [[date]] },
-  { method: 'POST', path: '/dates', schema: contract.dateResponseSchema, upstreamData: [id, date], body: { title: 'Cinema', category: 'film' } },
+  { method: 'POST', path: '/dates', schema: contract.dateResponseSchema, upstreamData: [id, date], body: { title: 'Cinema', category: 'movie' } },
   { method: 'PATCH', path: '/dates/' + id, schema: contract.dateResponseSchema, upstreamData: [date], body: { title: 'Cinema' } },
   { method: 'GET', path: '/location', schema: contract.locationResponseSchema, upstreamData: [[partner]] },
   { method: 'PUT', path: '/location', schema: contract.savedLocationResponseSchema, upstreamData: [id, { ...partner, space_id: id }], body: coordinates },
@@ -201,6 +216,15 @@ test('photo uploads match the shared response schema', async () => {
   expect(upload.id).toBe(photo.id)
   expect(upload.path).toMatch(new RegExp('^' + id + '/[a-f0-9-]{36}$'))
   expect(upload.fullPath).toBe('gallery/' + upload.path)
+})
+
+test('filters dates by a category key and returns the shared date shape', async () => {
+  upstream.mockResolvedValueOnce(Response.json([date]))
+  const response = await request('GET', '/dates?category=movie')
+  expect(response.status).toBe(200)
+  expect(contract.datesResponseSchema.parse(await response.json())).toEqual([date])
+  const upstreamUrl = new URL(String(upstream.mock.calls[0][0]))
+  expect(upstreamUrl.searchParams.get('category')).toBe('eq.movie')
 })
 
 test.each([

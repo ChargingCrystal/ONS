@@ -15,7 +15,7 @@ cp .env.example .env
 
 Copy the public or anon key from `supabase status` to `NUXT_PUBLIC_SUPABASE_KEY` and start the app with `npm run dev`. Local Auth allows test signups without email confirmation. The home page links to the process health check.
 
-For a new hosted Supabase project, apply both SQL migrations in numerical order. Set the public Supabase URL and key in Vercel, allow the app's HTTPS origin in Supabase Auth URL Configuration, and enable email confirmation for public signups. To enable Google login, configure the Google provider in Supabase Auth and register the callback URL shown there in the Google Console.
+For a new hosted Supabase project, apply all SQL migrations in numerical order. Set the public Supabase URL and key in Vercel, allow the app's HTTPS origin in Supabase Auth URL Configuration, and enable email confirmation for public signups. To enable Google login, configure the Google provider in Supabase Auth and register the callback URL shown there in the Google Console.
 
 ## Auth and demo
 
@@ -39,7 +39,7 @@ api() {
 api "$A" space -X POST
 CODE=$(api "$A" space | jq -r .invite)
 api "$B" space/join -d "$(jq -nc --arg code "$CODE" '{code:$code}')"
-api "$A" dates -d '{"title":"Movie night","category":"cinema","meeting_at":"2027-01-15T18:00:00Z"}'
+api "$A" dates -d '{"title":"Movie night","category":"movie","meeting_at":"2027-01-15T18:00:00Z"}'
 api "$B" dates
 api "$B" dashboard
 ```
@@ -54,16 +54,24 @@ Send `Authorization: Bearer <access_token>` on authenticated routes and `Accept:
 | `GET /api/space` | Bearer | — | `200` with `id`, `invite`, and `members`, or `204` when unpaired | `unauthorized`, `internal` |
 | `POST /api/space` | Bearer | — | `200` with the new space `id` | `already_paired`, `unauthorized`, `internal` |
 | `POST /api/space/join` | Bearer | JSON `code`, 32 lowercase hex characters | `200` with the joined space `id`. Joining consumes the invite. | `invite_invalid`, `already_paired`, `validation_failed`, `unauthorized`, `internal` |
-| `GET /api/dates` | Bearer | Optional `q`, `category`, `status`, `sort`, `order`, `offset` | `200` with up to 50 date rows | `validation_failed`, `unauthorized`, `internal` |
-| `POST /api/dates` | Bearer | JSON `title`, `category`, optional `status` and `meeting_at` | `200` with the created date row | `validation_failed`, `no_space`, `unauthorized`, `internal` |
-| `PATCH /api/dates/:id` | Bearer | UUID `id` and at least one writable date field | `200` with the updated date row | `validation_failed`, `not_found`, `unauthorized`, `internal` |
+| `GET /api/dates` | Bearer | Optional `q`, `category` key, `status`, `sort`, `order`, `offset` | `200` with up to 50 date rows containing category keys | `validation_failed`, `unauthorized`, `internal` |
+| `POST /api/dates` | Bearer | JSON `title`, `category` key, optional `status` and `meeting_at` | `200` with the created date row | `validation_failed`, `no_space`, `unauthorized`, `internal` |
+| `PATCH /api/dates/:id` | Bearer | UUID `id` and at least one writable date field. A supplied `category` must be a key. | `200` with the updated date row | `validation_failed`, `not_found`, `unauthorized`, `internal` |
 | `DELETE /api/dates/:id` | Bearer | UUID `id` | `204` | `validation_failed`, `not_found`, `unauthorized`, `internal` |
 | `GET /api/location` | Bearer | — | `200` with `partners`, `distanceKm`, and `midpoint`. Unavailable derived values are null. | `unauthorized`, `internal` |
 | `PUT /api/location` | Bearer | JSON `lat` and `lon` | `200` with the saved location row | `validation_failed`, `no_space`, `unauthorized`, `internal` |
-| `GET /api/dashboard` | Bearer | — | `200` with `serverTime`, `nextMeeting`, and `categoriesByMonth` using UTC months | `unauthorized`, `internal` |
+| `GET /api/dashboard` | Bearer | — | `200` with `serverTime`, `nextMeeting`, and `categoriesByMonth` grouped by UTC month and category key | `unauthorized`, `internal` |
 | `GET /api/photos` | Bearer | Optional `offset` | `200` with up to 30 uploads newest first, with signed URLs valid for five minutes | `validation_failed`, `no_space`, `unauthorized`, `internal` |
 | `POST /api/photos` | Bearer | Raw JPEG, PNG, or WebP bytes with matching `Content-Type`, up to 5 MiB in Nitro | `200` with Storage `id`, `path`, and `fullPath` | `validation_failed`, `no_space`, `unauthorized`, `internal` |
 | `DELETE /api/photos/:name` | Bearer | UUID `name` from the gallery | `204`, including when the name is absent from the caller's gallery | `validation_failed`, `no_space`, `unauthorized`, `internal` |
+
+### Date category keys
+
+Import `DATE_CATEGORIES` and `DateCategory` from [shared/date-categories.ts](shared/date-categories.ts). The keys are `dinner`, `movie`, `walk`, `trip`, `video_call`, `game`, and `other`. Use them for date forms, the list filter, date responses, and dashboard charts. Translate their display labels in German, English, and Dutch.
+
+For example, `GET /api/dates?category=movie` filters by movie dates. Create or update requests use `"category":"movie"`, and the returned date row contains the same key. To clear the filter, omit `category`. An empty `category`, a translated label such as `Kino`, or any other non-key returns HTTP `400` with `data.code = "validation_failed"`.
+
+Migration `003` trims surrounding whitespace and maps known legacy aliases case-insensitively. For example, `Kino`, `film`, and `cinema` become `movie` and share one dashboard category. Unrecognized values become `other`. Apply the migration before serving this API version.
 
 ### Error codes and statuses
 

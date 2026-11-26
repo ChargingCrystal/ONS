@@ -1,0 +1,37 @@
+{
+  "app": {
+    "name": "Ons"
+  },
+  "nav": {
+    "label": "Hoofdnavigatie",
+    "home": "Home",
+    "dates": "Dates",
+    "map": "Kaart",
+    "photos": "Foto's"
+  },
+  "language": {
+    "label": "Taal"
+  },
+  "a11y": {
+    "skipToContent": "Ga naar de inhoud"
+  },
+  "common": {
+    "comingSoon": "Deze pagina volgt binnenkort."
+  },
+  "pages": {
+    "home": {
+      "title": "Home",
+      "intro": "Jullie gezamenlijke planner voor een langeafstandsrelatie.",
+      "backendStatus": "Backendstatus"
+    },
+    "dates": {
+      "title": "Dates"
+    },
+    "map": {
+      "title": "Kaart"
+    },
+    "photos": {
+      "title": "Foto's"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "app": {
+    "name": "Ons"
+  },
+  "nav": {
+    "label": "Main navigation",
+    "home": "Home",
+    "dates": "Dates",
+    "map": "Map",
+    "photos": "Photos"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "a11y": {
+    "skipToContent": "Skip to content"
+  },
+  "common": {
+    "comingSoon": "This page is coming soon."
+  },
+  "pages": {
+    "home": {
+      "title": "Home",
+      "intro": "Your shared planner for a long-distance relationship.",
+      "backendStatus": "Backend status"
+    },
+    "dates": {
+      "title": "Dates"
+    },
+    "map": {
+      "title": "Map"
+    },
+    "photos": {
+      "title": "Photos"
+    }
+  }
+}

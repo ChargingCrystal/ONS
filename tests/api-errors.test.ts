@@ -157,6 +157,57 @@ test('returns internal for unexpected upstream errors without claiming a pairing
   await expectError(await request('GET', '/dashboard'), 500, 'internal')
 })
 
+test('public health runs a fresh anonymous database probe on every request', async () => {
+  upstream.mockImplementation(async () => Response.json(true))
+  for (const token of [false, true]) {
+    const response = await request('GET', '/health', undefined, token)
+    expect(response.status).toBe(200)
+    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(contract.healthResponseSchema.parse(await response.json())).toEqual({ status: 'ok' })
+  }
+  expect(upstream).toHaveBeenCalledTimes(2)
+  for (const [input, init] of upstream.mock.calls) {
+    expect(new URL(String(input)).pathname).toBe('/rest/v1/rpc/database_health')
+    const headers = new Headers(init.headers)
+    expect(headers.get('apikey')).toBe('public-key')
+    expect(headers.get('authorization')).not.toBe('Bearer test-token')
+  }
+})
+
+test('returns unavailable for health when Supabase configuration is missing', async () => {
+  configured = false
+  await expectError(await request('GET', '/health', undefined, false), 503, 'internal')
+  expect(upstream).not.toHaveBeenCalled()
+})
+
+test.each([401, 404, 500])('returns unavailable for health when Supabase returns %s', async (status) => {
+  postgresError('PGRST001', status)
+  const response = await request('GET', '/health', undefined, false)
+  expect(response.headers.get('cache-control')).toBe('no-store')
+  await expectError(response, 503, 'internal')
+})
+
+test.each([false, null, 'true'])('returns unavailable for health when the probe returns %j', async (value) => {
+  upstream.mockResolvedValueOnce(Response.json(value))
+  await expectError(await request('GET', '/health', undefined, false), 503, 'internal')
+})
+
+test('returns unavailable for health when Supabase is unreachable', async () => {
+  await expectError(await request('GET', '/health', undefined, false), 503, 'internal')
+})
+
+test('returns unavailable for health when the database probe times out', async () => {
+  const abort = vi.fn()
+  upstream.mockImplementationOnce((_input, { signal }) => new Promise((_resolve, reject) => {
+    signal.addEventListener('abort', () => {
+      abort()
+      reject(signal.reason)
+    }, { once: true })
+  }))
+  await expectError(await request('GET', '/health', undefined, false), 503, 'internal')
+  expect(abort).toHaveBeenCalledOnce()
+}, 8_000)
+
 test.each([
   ['POST', '/dates', { title: 'Cinema', category: 'Kino' }],
   ['PATCH', '/dates/' + id, { category: 'cinema' }],
@@ -173,7 +224,6 @@ test.each([
 })
 
 test.each([
-  { method: 'GET', path: '/health', schema: contract.healthResponseSchema, upstreamData: [] },
   { method: 'GET', path: '/space', schema: contract.spaceResponseSchema, upstreamData: [space] },
   { method: 'POST', path: '/space', schema: contract.spaceIdResponseSchema, upstreamData: [id] },
   { method: 'POST', path: '/space/join', schema: contract.spaceIdResponseSchema, upstreamData: [id], body: { code: invite } },

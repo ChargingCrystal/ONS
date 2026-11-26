@@ -67,6 +67,14 @@ afterEach(async () => {
 
 const login = i => pg.query("select set_config('request.jwt.claim.sub',$1,false)", [users[i].id])
 
+test('the anonymous health probe can run without access to private data or other RPCs', async () => {
+  await migrate()
+  await pg.exec('set role anon')
+  assert.deepEqual((await pg.query('select public.database_health()')).rows, [{ database_health: true }])
+  await assert.rejects(pg.query('select * from public.dates'), { code: '42501' })
+  await assert.rejects(pg.query('select public.dashboard()'), { code: '42501' })
+})
+
 test('pairing, one-time invite, shared dates, private locations and outsider isolation', async () => {
   await migrate()
   await login(0)

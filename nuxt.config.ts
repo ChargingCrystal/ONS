@@ -16,6 +16,13 @@ export default defineNuxtConfig({
       { code: 'en', language: 'en-GB', name: 'English', file: 'en.json' },
       { code: 'nl', language: 'nl-NL', name: 'Nederlands', file: 'nl.json' },
     ],
+    // Pages without language prefixes are listed here. The route macro in the page itself
+    // breaks the build on Linux.
+    customRoutes: 'config',
+    pages: {
+      // Supabase only returns to addresses on its allow list, so there is just /auth/callback.
+      'auth/callback': false,
+    },
     // First visit: browser language, otherwise German. Later visits: the saved cookie.
     detectBrowserLanguage: {
       useCookie: true,

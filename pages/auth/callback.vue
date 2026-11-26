@@ -6,9 +6,8 @@ const route = useRoute()
 const localePath = useLocalePath()
 const session = useSessionStore()
 
+// This page has no language prefixes: see i18n.pages in nuxt.config.ts.
 definePageMeta({ access: 'public' })
-// One address for all languages, because Supabase only returns to listed addresses.
-defineI18nRoute(false)
 useHead({ title: () => t('pages.callback.title') })
 
 // Message key of what went wrong. Empty while the sign-in is still being checked.

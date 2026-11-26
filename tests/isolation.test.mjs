@@ -44,16 +44,21 @@ beforeEach(async () => {
     grant select, insert, delete on storage.objects to authenticated;
   `)
   users = (await pg.query('select id from auth.users order by id')).rows
+}, 15_000)
 
+async function migrate(seedLegacyDates) {
   const migrationFiles = (await readdir(migrations))
     .filter(name => /^\d+_.+\.sql$/.test(name))
     .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
   for (const filename of migrationFiles) {
     await pg.exec(await readFile(new URL(filename, migrations), 'utf8'))
+    if (filename === '002_private_gallery.sql' && seedLegacyDates) {
+      await seedLegacyDates()
+    }
   }
 
   await pg.exec('set role authenticated')
-}, 15_000)
+}
 
 afterEach(async () => {
   await pg.close()
@@ -62,6 +67,7 @@ afterEach(async () => {
 const login = i => pg.query("select set_config('request.jwt.claim.sub',$1,false)", [users[i].id])
 
 test('pairing, one-time invite, shared dates, private locations and outsider isolation', async () => {
+  await migrate()
   await login(0)
   await pg.query('select create_space()')
   const { invite } = (await pg.query('select invite from spaces')).rows[0]
@@ -85,6 +91,7 @@ test('pairing, one-time invite, shared dates, private locations and outsider iso
 })
 
 test('a partner can read the other partner’s location', async () => {
+  await migrate()
   await login(0)
   await pg.query('select create_space()')
   const { invite } = (await pg.query('select invite from spaces')).rows[0]
@@ -97,6 +104,7 @@ test('a partner can read the other partner’s location', async () => {
 })
 
 test('dashboard returns the earliest upcoming planned meeting in the caller’s space', async () => {
+  await migrate()
   await login(1)
   await pg.query('select create_space()')
   await pg.query("insert into dates(title, category, meeting_at) values ('Other space', 'film', now() + interval '1 hour')")
@@ -113,6 +121,7 @@ test('dashboard returns the earliest upcoming planned meeting in the caller’s 
 })
 
 test('the private gallery allows shared access and enforces space boundaries for reads, uploads and deletions', async () => {
+  await migrate()
   await login(0)
   const { id } = (await pg.query('select create_space() as id')).rows[0]
   const { invite } = (await pg.query('select invite from spaces')).rows[0]
@@ -136,4 +145,61 @@ test('the private gallery allows shared access and enforces space boundaries for
   assert.deepEqual((await listPhotos()).rows, [{ name: photo }])
   assert.deepEqual((await removePhoto()).rows, [{ name: photo }])
   assert.deepEqual((await listPhotos()).rows, [])
+})
+
+test('migrates legacy dates and combines localized aliases in the dashboard', async () => {
+  const mapping = [
+    ['dinner', 'dinner'],
+    [' Abendessen ', 'dinner'],
+    ['AVONDETEN', 'dinner'],
+    ['movie', 'movie'],
+    ['film', 'movie'],
+    ['cinema', 'movie'],
+    ['\tKiNo\n', 'movie'],
+    ['bioscoop', 'movie'],
+    ['walk', 'walk'],
+    ['Spaziergang', 'walk'],
+    ['wandeling', 'walk'],
+    ['trip', 'trip'],
+    ['Ausflug', 'trip'],
+    ['uitstapje', 'trip'],
+    ['video_call', 'video_call'],
+    ['video call', 'video_call'],
+    ['Videoanruf', 'video_call'],
+    ['videobellen', 'video_call'],
+    ['game', 'game'],
+    ['Spiel', 'game'],
+    ['spel', 'game'],
+    ['other', 'other'],
+    ['Unknown legacy category', 'other'],
+  ]
+  const legacyDates = mapping.map(([category], index) => ({
+    title: 'Legacy date ' + String(index).padStart(2, '0'),
+    category,
+  }))
+  await migrate(async () => {
+    await pg.exec('set role authenticated')
+    await login(0)
+    await pg.query('select create_space()')
+    for (const { title, category } of legacyDates) {
+      await pg.query("insert into dates(title, category, meeting_at) values ($1, $2, '2099-01-01T00:00:00Z')", [title, category])
+    }
+    await pg.exec('reset role')
+  })
+
+  await login(0)
+  const { rows } = await pg.query('select title, category from dates order by title')
+  assert.deepEqual(rows, legacyDates.map(({ title }, index) => ({ title, category: mapping[index][1] })))
+  const { data } = (await pg.query('select dashboard() as data')).rows[0]
+  assert.equal(data.categoriesByMonth.find(({ category }) => category === 'movie')?.total, 5)
+  assert.ok(mapping.some(([, category]) => category === data.nextMeeting.category))
+})
+
+test('Postgres rejects unsupported categories on insert and update', async () => {
+  await migrate()
+  await login(0)
+  await pg.query('select create_space()')
+  await pg.query("insert into dates(title, category) values ('Cinema', 'movie')")
+  await assert.rejects(pg.query("insert into dates(title, category) values ('Cinema', 'cinema')"), { code: '23514' })
+  await assert.rejects(pg.query("update dates set category = 'Movie'"), { code: '23514' })
 })

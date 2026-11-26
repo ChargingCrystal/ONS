@@ -158,6 +158,21 @@ test('returns internal for unexpected upstream errors without claiming a pairing
 })
 
 test.each([
+  ['POST', '/dates', { title: 'Cinema', category: 'Kino' }],
+  ['PATCH', '/dates/' + id, { category: 'cinema' }],
+  ['GET', '/dates?category=film'],
+  ['GET', '/dates?category='],
+  ['GET', '/dates?category=%20movie%20'],
+] as const)('rejects a non-key category on %s %s before reaching Supabase', async (method, path, body) => {
+  if (method === 'POST') {
+    upstream.mockResolvedValueOnce(Response.json(id))
+  }
+  upstream.mockResolvedValueOnce(Response.json(method === 'GET' ? [] : date))
+  await expectError(await request(method, path, body ? JSON.stringify(body) : undefined), 400, 'validation_failed')
+  expect(upstream).not.toHaveBeenCalled()
+})
+
+test.each([
   { method: 'GET', path: '/health', schema: contract.healthResponseSchema, upstreamData: [] },
   { method: 'GET', path: '/space', schema: contract.spaceResponseSchema, upstreamData: [space] },
   { method: 'POST', path: '/space', schema: contract.spaceIdResponseSchema, upstreamData: [id] },

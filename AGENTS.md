@@ -156,12 +156,12 @@ Rule 1 applies to everyone, including the frontend.
   Protect pages with route middleware, not with `v-if` in components.
   - `middleware/auth.global.ts` protects **every** page. A page opts out with
     `definePageMeta({ access: 'public' })` or `access: 'guest'` (only for signed-out visitors).
-  - Reach Supabase Auth only through `useSupabaseAuth()`. The session state is in `stores/session.ts`.
+  - Reach Supabase Auth only through `composables/useSupabaseAuth.ts`. The session state is in `stores/session.ts`.
   - Call the API only through `useApi()` and show a failure with `t(error.messageKey)`.
   - A `redirect` query value goes through `useReturnTarget()`, which only accepts paths inside the app.
   - Google sign-in and confirmation emails return to `/auth/callback` (one address, no language prefix).
-  - `PASSWORD_MIN_LENGTH` in `composables/formRules.ts` must match `minimum_password_length` in
-    `supabase/config.toml` (not set there today, so the Supabase Auth default of 6 applies).
+  - Passwords need at least 8 characters. `PASSWORD_MIN_LENGTH` in `composables/formRules.ts` and
+    `minimum_password_length` under `[auth]` in `supabase/config.toml` must match; a frontend test fails otherwise.
 
 ## Current data model
 

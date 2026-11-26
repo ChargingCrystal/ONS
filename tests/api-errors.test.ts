@@ -47,6 +47,17 @@ beforeAll(async () => {
   router.delete('/api/dates/:id', (await import('../server/api/dates/[id].delete')).default)
   router.put('/api/location', (await import('../server/api/location.put')).default)
   router.get('/api/location', (await import('../server/api/location.get')).default)
+  const lifecycle = import.meta.glob<{ default: h3.EventHandler }>('../server/api/{profile/*,space/invite.post,space/membership.delete,location.delete}.ts')
+  for (const [method, path, file] of [
+    ['get', '/api/profile', 'profile/index.get'],
+    ['put', '/api/profile', 'profile/index.put'],
+    ['post', '/api/space/invite', 'space/invite.post'],
+    ['delete', '/api/space/membership', 'space/membership.delete'],
+    ['delete', '/api/location', 'location.delete'],
+  ] as const) {
+    const load = lifecycle['../server/api/' + file + '.ts']
+    if (load) router[method](path, (await load()).default)
+  }
   router.get('/api/dashboard', (await import('../server/api/dashboard.get')).default)
   router.post('/api/photos', (await import('../server/api/photos/index.post')).default)
   router.get('/api/photos', (await import('../server/api/photos/index.get')).default)
@@ -225,6 +236,58 @@ test('filters dates by a category key and returns the shared date shape', async 
   expect(contract.datesResponseSchema.parse(await response.json())).toEqual([date])
   const upstreamUrl = new URL(String(upstream.mock.calls[0][0]))
   expect(upstreamUrl.searchParams.get('category')).toBe('eq.movie')
+})
+
+test('returns a profile even before a name is set', async () => {
+  upstream.mockResolvedValueOnce(Response.json({ display_name: null }))
+  const response = await request('GET', '/profile')
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({ display_name: null })
+})
+
+test('trims and saves a profile name', async () => {
+  upstream.mockResolvedValueOnce(Response.json({ display_name: 'Alex' }))
+  const response = await request('PUT', '/profile', '{"display_name":" Alex "}')
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({ display_name: 'Alex' })
+  expect(JSON.parse(String(upstream.mock.calls[0][1].body))).toEqual({ display_name: 'Alex' })
+})
+
+test('rejects blank profile names without querying Supabase', async () => {
+  await expectError(await request('PUT', '/profile', '{"display_name":" "}'), 400, 'validation_failed')
+  expect(upstream).not.toHaveBeenCalled()
+})
+
+test('returns partner display names on the space response', async () => {
+  upstream.mockImplementationOnce(async input => {
+    const useRpc = String(input).endsWith('/rpc/space_details')
+    return Response.json(useRpc ? { ...space, members: [{ ...space.members[0], display_name: 'Alex' }] } : space)
+  })
+  const response = await request('GET', '/space')
+  expect(response.status).toBe(200)
+  expect((await response.json()).members[0].display_name).toBe('Alex')
+})
+
+test('regenerates invites and returns the new code', async () => {
+  upstream.mockResolvedValueOnce(Response.json(invite))
+  const response = await request('POST', '/space/invite')
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({ invite })
+})
+
+test.each([
+  ['PT403', 403, 'no_space'],
+  ['PT409', 409, 'already_paired'],
+] as const)('maps invite rotation failure %s', async (state, status, code) => {
+  postgresError(state, status)
+  await expectError(await request('POST', '/space/invite'), status, code)
+})
+
+test.each(['/space/membership', '/location'])('returns an empty 204 for DELETE %s', async path => {
+  upstream.mockResolvedValueOnce(new Response(null, { status: 204 }))
+  const response = await request('DELETE', path)
+  expect(response.status).toBe(204)
+  contract.noContentResponseSchema.parse(await response.text())
 })
 
 test.each([

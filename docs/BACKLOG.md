@@ -53,8 +53,8 @@ Update this file as items are done (delete the item or mark it `done` with the P
 - Add a GitHub Actions workflow: `npm ci`, `npm test`, `npm run build` on every pull request, and require it via branch protection.
 - Pin existing untested behavior before refactoring: extract the geo math from `location.get.ts` into `server/utils/` with unit tests.
 - Extend tests: migration `002` (storage policies), a second-partner-reads-location case, `dashboard().nextMeeting`.
-- Update `lastenheft.md` section 12 to match what is actually used.
+- Update `Lastenheft_Ons.md` section 12 to match what is actually used.
 
 ### B10: Readability
 - Add Prettier and an `.editorconfig`; reformat the dense one-liners (`package.json`, SQL, ternary chains) and add short comments.
-- Fix the broken tables in `lastenheft.md`.
+- Fix the broken tables in `Lastenheft_Ons.md`.

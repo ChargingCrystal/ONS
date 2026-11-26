@@ -8,7 +8,7 @@ Read this before changing anything. It is the single source of truth for AI codi
 Ons is a web app for two partners in a long-distance relationship: shared date ideas, shared photos,
 both locations with distance and midpoint, a countdown to the next meeting, and statistics.
 It is a semester project for "Frameworks for Web-based Application Systems" (TH Brandenburg),
-and is meant to stay usable after the course. Requirements live in `lastenheft.md`
+and is meant to stay usable after the course. Requirements live in `docs/Lastenheft_Ons.md`
 (IDs F1–F11 are referenced in code reviews and commits).
 
 Course milestones: working prototype for Business Angel Meeting II (December), pitch in January.
@@ -20,7 +20,7 @@ Course milestones: working prototype for Business Angel Meeting II (December), p
 - Deployment target: Vercel (app) + Supabase (backend services), free tiers
 - Backend prototype exists and is being hardened (see `docs/BACKLOG.md`).
   The frontend is being built now; `app.vue` is still a stub.
-- Frontend stack from `lastenheft.md`: Pinia, `@nuxtjs/i18n` (DE/EN/NL), Tailwind or UnoCSS,
+- Frontend stack from `docs/Lastenheft_Ons.md`: Pinia, `@nuxtjs/i18n` (DE/EN/NL), Tailwind or UnoCSS,
   Leaflet or MapLibre, Chart.js or ECharts. The frontend dev decides between the "or" options and records the
   choice here. A new dependency goes in `package.json`, a shared file: say why in the PR description.
 
@@ -30,7 +30,7 @@ Course milestones: working prototype for Business Angel Meeting II (December), p
 | --- | --- | --- |
 | Backend | `<backend dev>` (Codex) | `server/`, `supabase/`, `tests/`, `.github/` |
 | Frontend | `<frontend dev>` (Claude Code) | `pages/`, `components/`, `composables/`, `layouts/`, `middleware/`, `plugins/`, `stores/`, `assets/`, `public/`, `locales/`, `i18n/`, `app.vue` |
-| Shared (small PRs, tell the other person) | both | `package.json`, `nuxt.config.ts`, `shared/`, `AGENTS.md`, `CLAUDE.md`, `docs/`, `lastenheft.md`, `README.md` |
+| Shared (small PRs, tell the other person) | both | `package.json`, `nuxt.config.ts`, `shared/`, `AGENTS.md`, `CLAUDE.md`, `docs/`, `README.md` |
 
 Agents: stay inside your owner's paths. If a task needs a change in the other area,
 stop and describe what is needed (route, fields, error codes) instead of editing it.
@@ -150,7 +150,7 @@ The API surface is documented in the table in `README.md`. Do not duplicate it h
 - Do not add dependencies without saying why in the PR description.
 - Never commit `.env` or any secret. `.env.example` holds placeholders only.
 - Do not commit agent-local settings (for example `.claude/settings.local.json` or personal Codex config); keep them in `.gitignore`.
-- Do not change requirements in `lastenheft.md` without team agreement.
+- Do not change requirements in `docs/Lastenheft_Ons.md` without team agreement.
 
 ## Git workflow
 
@@ -167,7 +167,7 @@ The API surface is documented in the table in `README.md`. Do not duplicate it h
 
 ## Where to look
 
-- `lastenheft.md`: requirements, evaluation criteria, timeline
+- `docs/Lastenheft_Ons.md`: requirements, evaluation criteria, timeline
 - `docs/BACKLOG.md`: known gaps and the agreed order of work
 - `README.md`: setup and the API table (the contract with the frontend)
 - `shared/`: types shared between frontend and API (create when first needed)

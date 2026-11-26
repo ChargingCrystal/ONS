@@ -61,25 +61,29 @@ describe('returning visit', () => {
   })
 
   test('a saved German choice stays German in a foreign-language browser', async () => {
-    const response = await visit('/dates', { saved: 'de', browser: 'en-GB' })
-    expect(response.status).toBe(200)
-    expect(response.body).toContain('lang="de-DE"')
+    const landing = await visit('/', { saved: 'de', browser: 'en-GB' })
+    expect(landing.status).toBe(200)
+    expect(landing.body).toContain('lang="de-DE"')
+
+    const appPage = await visit('/dates', { saved: 'de', browser: 'en-GB' })
+    expect(appPage.status).toBe(200)
+    expect(appPage.location).toBeNull()
   })
 
   test('a language prefix in the URL wins and becomes the saved language', async () => {
-    const response = await visit('/en/dates', { saved: 'nl' })
+    const response = await visit('/en', { saved: 'nl' })
     expect(response.status).toBe(200)
     expect(response.body).toContain('lang="en-GB"')
     expect(response.cookie).toContain('ons_locale=en')
   })
 })
 
-describe('server-rendered pages', () => {
+describe('the landing page', () => {
   test.each([
-    ['/map', 'de-DE', 'Karte'],
-    ['/en/map', 'en-GB', 'Map'],
-    ['/nl/map', 'nl-NL', 'Kaart'],
-  ])('%s is rendered in %s', async (path, language, heading) => {
+    ['/', 'de-DE', 'Start'],
+    ['/en', 'en-GB', 'Home'],
+    ['/nl', 'nl-NL', 'Home'],
+  ])('%s is rendered on the server in %s', async (path, language, heading) => {
     const response = await visit(path, { saved: language.slice(0, 2) })
     expect(response.status).toBe(200)
     expect(response.body).toContain(`lang="${language}"`)
@@ -87,14 +91,26 @@ describe('server-rendered pages', () => {
     expect(response.body).toContain(`<title>${heading} · Ons</title>`)
   })
 
-  test.each(['/', '/dates', '/map', '/photos'])('%s exists', async (path) => {
-    const response = await visit(path, { saved: 'de' })
-    expect(response.status).toBe(200)
-  })
-
-  test('contain no SEO link tags yet, because those need a fixed base URL (F10)', async () => {
+  test('contains no SEO link tags yet, because those need a fixed base URL (F10)', async () => {
     const response = await visit('/', { saved: 'de' })
     expect(response.body).not.toMatch(/<link[^>]+rel="(alternate|canonical)"/)
+  })
+})
+
+describe('app and sign-in pages', () => {
+  // Only the browser knows the session, so the server sends an empty page shell.
+  test.each([
+    '/dashboard',
+    '/dates',
+    '/map',
+    '/photos',
+    '/en/dates',
+    '/login',
+    '/register',
+  ])('%s is rendered in the browser only', async (path) => {
+    const response = await visit(path, { saved: path.startsWith('/en/') ? 'en' : 'de' })
+    expect(response.status).toBe(200)
+    expect(response.body).not.toContain('<h1')
   })
 })
 

@@ -1,10 +1,18 @@
-import { mountSuspended } from '@nuxt/test-utils/runtime'
+import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
 import { flushPromises } from '@vue/test-utils'
-import { beforeEach, describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 import { RouterLink } from 'vue-router'
+import { createFakeAuth } from '../../composables/__tests__/fake-auth'
+import { resetSession } from '../../composables/__tests__/reset-session'
 import AppNav from '../AppNav.vue'
 
+const supabase = vi.hoisted(() => ({ auth: undefined as unknown }))
+mockNuxtImport('useSupabaseAuth', () => () => supabase.auth)
+
+// Somebody is signed in, because some tests visit protected pages.
 beforeEach(async () => {
+  supabase.auth = createFakeAuth({ signedInAs: 'ann@example.org' }).auth
+  resetSession()
   await useNuxtApp().$i18n.setLocale('de')
   await useRouter().push('/')
 })

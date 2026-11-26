@@ -46,10 +46,14 @@ Update this file as items are done (delete the item or mark it `done` with the P
 ### B8: Realtime (F10, specialization)
 - Add `dates` and `photos` to the `supabase_realtime` publication in a new migration; subscribe in the frontend.
 
-### B9: Tests and CI (Teamwork and quality)
-- Add a GitHub Actions workflow: `npm ci`, `npm test`, `npm run build` on every pull request.
+### B9: Test tooling and CI (do this first, the team works test-first)
+- Set up Vitest as the single runner for unit, component and database tests (`npm test`), with `@nuxt/test-utils` and
+  Vue Test Utils for the frontend. Port `tests/isolation.test.mjs` so there is one runner (PGlite should work under Vitest).
+- Set up Playwright for a few E2E flows (later).
+- Add a GitHub Actions workflow: `npm ci`, `npm test`, `npm run build` on every pull request, and require it via branch protection.
+- Pin existing untested behavior before refactoring: extract the geo math from `location.get.ts` into `server/utils/` with unit tests.
 - Extend tests: migration `002` (storage policies), a second-partner-reads-location case, `dashboard().nextMeeting`.
-- The lastenheft names Vitest and Playwright; the repo uses `node:test` + PGlite. Decide and update `lastenheft.md` section 12.
+- Update `lastenheft.md` section 12 to match what is actually used.
 
 ### B10: Readability
 - Add Prettier and an `.editorconfig`; reformat the dense one-liners (`package.json`, SQL, ternary chains) and add short comments.

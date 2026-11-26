@@ -59,7 +59,9 @@ test.skipIf(!key)('local Realtime isolates live events from outsiders and a form
       await change()
       for (const index of recipients) {
         await expect.poll(() => inboxes[index].map(message => message.event), { timeout: 6_000 }).toEqual([event])
-        expect(inboxes[index][0].payload).toEqual({})
+        const { id, ...payload } = inboxes[index][0].payload
+        expect(payload).toEqual({})
+        if (id !== undefined) expect(id).toMatch(/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i)
       }
       // Let delivery settle across all three open sockets before checking the outsiders.
       await delay(350)

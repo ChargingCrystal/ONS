@@ -6,3 +6,4 @@ node_modules/
 .vercel/
 supabase/.temp/
 supabase/.branches/
+/.claude/settings.local.json

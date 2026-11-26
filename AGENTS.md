@@ -28,8 +28,8 @@ Course milestones: working prototype for Business Angel Meeting II (December), p
 
 | Area | Owner | Paths |
 | --- | --- | --- |
-| Backend | `<ChargingCrystal>` (Codex) | `server/`, `supabase/`, `tests/`, `.github/` |
-| Frontend | `<Filionus>` (Claude Code) | `pages/`, `components/`, `composables/`, `layouts/`, `middleware/`, `plugins/`, `stores/`, `assets/`, `public/`, `locales/`, `i18n/`, `app.vue` |
+| Backend | `ChargingCrystal` (Codex) | `server/`, `supabase/`, `tests/`, `.github/` |
+| Frontend | `Filionus` (Claude Code) | `pages/`, `components/`, `composables/`, `layouts/`, `middleware/`, `plugins/`, `stores/`, `assets/`, `public/`, `locales/`, `i18n/`, `app.vue` |
 | Shared (small PRs, tell the other person) | both | `package.json`, `nuxt.config.ts`, `shared/`, `AGENTS.md`, `CLAUDE.md`, `docs/`, `README.md` |
 
 Agents: stay inside your owner's paths. If a task needs a change in the other area,

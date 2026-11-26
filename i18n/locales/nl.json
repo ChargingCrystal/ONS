@@ -42,5 +42,30 @@
     "register": {
       "title": "Account aanmaken"
     }
+  },
+  "errors": {
+    "unexpected": "Er is iets misgegaan. Probeer het opnieuw.",
+    "network": "De server is niet bereikbaar. Controleer je internetverbinding en probeer het opnieuw.",
+    "api": {
+      "inviteInvalid": "Deze uitnodiging is ongeldig of al gebruikt.",
+      "alreadyPaired": "Je hoort al bij een gedeelde ruimte.",
+      "noSpace": "Maak eerst een gedeelde ruimte aan of sluit je bij een aan.",
+      "notFound": "Dit item is niet gevonden.",
+      "validationFailed": "Controleer je invoer.",
+      "unauthorized": "Je sessie is verlopen. Log opnieuw in.",
+      "internal": "De server heeft nu een probleem. Probeer het later opnieuw."
+    },
+    "auth": {
+      "invalidCredentials": "Het e-mailadres of wachtwoord klopt niet.",
+      "emailNotConfirmed": "Bevestig eerst je e-mailadres via de link die we je hebben gestuurd.",
+      "userExists": "Er bestaat al een account voor dit e-mailadres. Log in plaats daarvan in.",
+      "emailInvalid": "Dit e-mailadres wordt niet geaccepteerd.",
+      "weakPassword": "Dit wachtwoord is te zwak. Kies een langer wachtwoord.",
+      "signupDisabled": "Nieuwe registraties zijn op dit moment niet mogelijk.",
+      "methodDisabled": "Deze manier van inloggen is nu niet beschikbaar.",
+      "rejected": "Het inloggen is geweigerd. Controleer je invoer.",
+      "tooManyAttempts": "Te veel pogingen. Wacht even en probeer het opnieuw.",
+      "unavailable": "Inloggen is op dit moment niet beschikbaar."
+    }
   }
 }

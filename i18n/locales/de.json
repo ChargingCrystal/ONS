@@ -42,5 +42,30 @@
     "register": {
       "title": "Registrieren"
     }
+  },
+  "errors": {
+    "unexpected": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    "network": "Keine Verbindung zum Server. Prüfe deine Internetverbindung und versuche es erneut.",
+    "api": {
+      "inviteInvalid": "Diese Einladung ist ungültig oder wurde schon benutzt.",
+      "alreadyPaired": "Du gehörst bereits zu einem gemeinsamen Bereich.",
+      "noSpace": "Erstelle zuerst einen gemeinsamen Bereich oder tritt einem bei.",
+      "notFound": "Dieser Eintrag wurde nicht gefunden.",
+      "validationFailed": "Bitte prüfe deine Eingaben.",
+      "unauthorized": "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an.",
+      "internal": "Der Server hat gerade ein Problem. Bitte versuche es später erneut."
+    },
+    "auth": {
+      "invalidCredentials": "E-Mail-Adresse oder Passwort ist falsch.",
+      "emailNotConfirmed": "Bitte bestätige zuerst deine E-Mail-Adresse über den Link in unserer E-Mail.",
+      "userExists": "Für diese E-Mail-Adresse gibt es schon ein Konto. Melde dich stattdessen an.",
+      "emailInvalid": "Diese E-Mail-Adresse wird nicht akzeptiert.",
+      "weakPassword": "Dieses Passwort ist zu schwach. Wähle ein längeres.",
+      "signupDisabled": "Neue Registrierungen sind derzeit nicht möglich.",
+      "methodDisabled": "Diese Anmeldeart ist derzeit nicht verfügbar.",
+      "rejected": "Die Anmeldung wurde abgelehnt. Bitte prüfe deine Eingaben.",
+      "tooManyAttempts": "Zu viele Versuche. Bitte warte kurz und versuche es erneut.",
+      "unavailable": "Die Anmeldung ist derzeit nicht verfügbar."
+    }
   }
 }

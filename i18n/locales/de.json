@@ -32,6 +32,15 @@
     },
     "photos": {
       "title": "Fotos"
+    },
+    "dashboard": {
+      "title": "Übersicht"
+    },
+    "login": {
+      "title": "Anmelden"
+    },
+    "register": {
+      "title": "Registrieren"
     }
   }
 }

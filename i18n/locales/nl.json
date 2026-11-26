@@ -32,6 +32,15 @@
     },
     "photos": {
       "title": "Foto's"
+    },
+    "dashboard": {
+      "title": "Overzicht"
+    },
+    "login": {
+      "title": "Inloggen"
+    },
+    "register": {
+      "title": "Account aanmaken"
     }
   }
 }

@@ -32,6 +32,15 @@
     },
     "photos": {
       "title": "Photos"
+    },
+    "dashboard": {
+      "title": "Overview"
+    },
+    "login": {
+      "title": "Sign in"
+    },
+    "register": {
+      "title": "Create account"
     }
   }
 }

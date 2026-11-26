@@ -24,5 +24,13 @@ export default defineNuxtConfig({
       fallbackLocale: 'de',
     },
   },
+  // The sign-in session lives in the browser, so pages are rendered there.
+  // Only the public landing page is rendered on the server, for search engines.
+  routeRules: {
+    '/**': { ssr: false },
+    '/': { ssr: true },
+    '/en': { ssr: true },
+    '/nl': { ssr: true },
+  },
   runtimeConfig: { public: { supabaseUrl: '', supabaseKey: '' } }
 })

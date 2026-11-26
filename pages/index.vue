@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const { t } = useI18n()
 
+definePageMeta({ access: 'public' })
 useHead({ title: () => t('pages.home.title') })
 </script>
 

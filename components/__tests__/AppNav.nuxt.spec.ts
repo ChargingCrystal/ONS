@@ -30,16 +30,16 @@ describe('AppNav', () => {
   test('is a labelled navigation with one link per main page', async () => {
     const wrapper = await mountOn('/')
     expect(wrapper.get('nav').attributes('aria-label')).toBe('Hauptnavigation')
-    expect(wrapper.findAll('a').map(link => link.text())).toEqual(['Start', 'Dates', 'Karte', 'Fotos'])
-    expect(wrapper.findAll('a').map(link => link.attributes('href'))).toEqual(['/', '/dates', '/map', '/photos'])
+    expect(wrapper.findAll('a').map(link => link.text())).toEqual(['Übersicht', 'Dates', 'Karte', 'Fotos'])
+    expect(wrapper.findAll('a').map(link => link.attributes('href'))).toEqual(['/dashboard', '/dates', '/map', '/photos'])
   })
 
   test('keeps the active language in labels and links', async () => {
     const wrapper = await mountOn('/nl')
     await useNuxtApp().$i18n.setLocale('nl')
     await flushPromises()
-    expect(wrapper.findAll('a').map(link => link.text())).toEqual(['Home', 'Dates', 'Kaart', 'Foto\'s'])
-    expect(wrapper.findAll('a').map(link => link.attributes('href'))).toEqual(['/nl', '/nl/dates', '/nl/map', '/nl/photos'])
+    expect(wrapper.findAll('a').map(link => link.text())).toEqual(['Overzicht', 'Dates', 'Kaart', 'Foto\'s'])
+    expect(wrapper.findAll('a').map(link => link.attributes('href'))).toEqual(['/nl/dashboard', '/nl/dates', '/nl/map', '/nl/photos'])
   })
 
   test('marks only the current page', async () => {

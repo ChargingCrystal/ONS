@@ -114,6 +114,15 @@ describe('app and sign-in pages', () => {
   })
 })
 
+describe('the sign-in return page', () => {
+  // Supabase only returns to addresses on its allow list, so there is just one.
+  test('is not redirected to a language prefix', async () => {
+    const response = await visit('/auth/callback?code=abc', { saved: 'en', browser: 'en-GB' })
+    expect(response.status).toBe(200)
+    expect(response.location).toBeNull()
+  })
+})
+
 describe('API routes', () => {
   test('are never redirected to a language prefix', async () => {
     const response = await visit('/api/health', { saved: 'nl', browser: 'nl-NL' })

@@ -47,7 +47,7 @@ describe('signed out', () => {
     expect(route.query.redirect).toBe('/dates?status=done')
   })
 
-  test.each(['/', '/en', '/login', '/en/register'])('%s is open', async (path) => {
+  test.each(['/', '/en', '/login', '/en/register', '/auth/callback'])('%s is open', async (path) => {
     expect((await visit(path)).path).toBe(path)
   })
 
@@ -63,7 +63,7 @@ describe('signed in', () => {
     signInAs(someone)
   })
 
-  test.each(['/dashboard', '/dates', '/en/map', '/nl/photos', '/'])('%s is open', async (path) => {
+  test.each(['/dashboard', '/dates', '/en/map', '/nl/photos', '/', '/auth/callback'])('%s is open', async (path) => {
     expect((await visit(path)).path).toBe(path)
   })
 

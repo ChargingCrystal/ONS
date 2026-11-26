@@ -35,16 +35,16 @@ describe('registration form', () => {
   test('asks for a new password and states the minimum length beforehand', async () => {
     const wrapper = await open()
     expect(field(wrapper, 'Passwort').attributes('autocomplete')).toBe('new-password')
-    expect(description(wrapper, 'Passwort')).toBe('Mindestens 6 Zeichen.')
+    expect(description(wrapper, 'Passwort')).toBe('Mindestens 8 Zeichen.')
   })
 
   test('rejects a password that is too short', async () => {
     const wrapper = await open()
 
-    await register(wrapper, '12345')
+    await register(wrapper, '1234567')
     await flushPromises()
 
-    expect(description(wrapper, 'Passwort')).toContain('Das Passwort braucht mindestens 6 Zeichen.')
+    expect(description(wrapper, 'Passwort')).toContain('Das Passwort braucht mindestens 8 Zeichen.')
     expect(field(wrapper, 'Passwort').attributes('aria-invalid')).toBe('true')
     expect(document.activeElement).toBe(field(wrapper, 'Passwort').element)
     expect(fake.auth.signUp).not.toHaveBeenCalled()

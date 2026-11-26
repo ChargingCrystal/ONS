@@ -2,14 +2,22 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, test } from 'vitest'
 import { emailError, newPasswordError, PASSWORD_MIN_LENGTH, passwordError } from '../formRules'
 
-// What Supabase Auth uses when config.toml does not set minimum_password_length.
-const authServerDefault = 6
-
 describe('PASSWORD_MIN_LENGTH', () => {
-  test('matches minimum_password_length of the local Supabase configuration', () => {
+  // Supabase recommends at least 8 characters.
+  test('is 8', () => {
+    expect(PASSWORD_MIN_LENGTH).toBe(8)
+  })
+
+  // The browser check alone can be bypassed, so Supabase has to require the same length.
+  // supabase/ belongs to the backend: if this fails, ask for the change there.
+  test('is also required by the local Supabase configuration', () => {
     const config = readFileSync(new URL('../../supabase/config.toml', import.meta.url), 'utf8')
-    const configured = config.match(/^\s*minimum_password_length\s*=\s*(\d+)/m)?.[1]
-    expect(PASSWORD_MIN_LENGTH).toBe(configured ? Number(configured) : authServerDefault)
+    // The key only counts inside the [auth] section.
+    const authSection = config.split(/^\[/m).find(section => section.startsWith('auth]')) ?? ''
+    const configured = authSection.match(/^minimum_password_length\s*=\s*(\d+)/m)?.[1]
+
+    const hint = `supabase/config.toml must set minimum_password_length = ${PASSWORD_MIN_LENGTH} under [auth]`
+    expect(Number(configured), hint).toBe(PASSWORD_MIN_LENGTH)
   })
 })
 

@@ -1,22 +1,58 @@
 import assert from 'node:assert/strict'
-import { readFile } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { PGlite } from '@electric-sql/pglite'
 import { afterEach, beforeEach, test } from 'vitest'
 
 let pg
 let users
 
+const migrations = new URL('../supabase/migrations/', import.meta.url)
+
 beforeEach(async () => {
-    pg = new PGlite()
-    await pg.exec(`create schema auth; create role anon; create role authenticated;
-      create table auth.users(id uuid primary key);
-      create function auth.uid() returns uuid language sql stable as
-      $$select current_setting('request.jwt.claim.sub')::uuid$$;
-      grant usage on schema auth to authenticated;
-      insert into auth.users select gen_random_uuid() from generate_series(1,3);`)
-    users = (await pg.query('select id from auth.users order by id')).rows
-    await pg.exec(await readFile(new URL('../supabase/migrations/001_couple_planner.sql',import.meta.url),'utf8'))
-    await pg.exec('set role authenticated')
+  pg = new PGlite()
+  // Model the Supabase-owned tables and roles that the project migrations depend on.
+  await pg.exec(`
+    create role anon;
+    create role authenticated;
+    create schema auth;
+    create table auth.users(id uuid primary key);
+    create function auth.uid() returns uuid language sql stable as
+      $$select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid$$;
+    grant usage on schema auth to authenticated;
+    insert into auth.users select gen_random_uuid() from generate_series(1, 3);
+
+    create schema storage;
+    create table storage.buckets (
+      id text primary key,
+      name text not null,
+      public boolean not null default false,
+      file_size_limit bigint,
+      allowed_mime_types text[]
+    );
+    create table storage.objects (
+      bucket_id text not null references storage.buckets(id),
+      name text not null,
+      primary key (bucket_id, name)
+    );
+    create function storage.foldername(name text) returns text[] language sql immutable as $$
+      select parts[1:cardinality(parts) - 1]
+      from (select string_to_array(name, '/') as parts) as path
+    $$;
+    alter table storage.objects enable row level security;
+    grant usage on schema storage to authenticated;
+    grant select on storage.buckets to authenticated;
+    grant select, insert, delete on storage.objects to authenticated;
+  `)
+  users = (await pg.query('select id from auth.users order by id')).rows
+
+  const migrationFiles = (await readdir(migrations))
+    .filter(name => /^\d+_.+\.sql$/.test(name))
+    .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
+  for (const filename of migrationFiles) {
+    await pg.exec(await readFile(new URL(filename, migrations), 'utf8'))
+  }
+
+  await pg.exec('set role authenticated')
 }, 15_000)
 
 afterEach(async () => {
@@ -26,24 +62,26 @@ afterEach(async () => {
 const login = i => pg.query("select set_config('request.jwt.claim.sub',$1,false)", [users[i].id])
 
 test('pairing, one-time invite, shared dates, private locations and outsider isolation', async () => {
-    await login(0)
-    await pg.query('select create_space()')
-    const {invite} = (await pg.query('select invite from spaces')).rows[0]
-    await pg.query("insert into dates(title,category) values('Cinema','film')")
-    await pg.query('insert into locations(lat,lon) values(52,12)')
-    await login(1)
-    await pg.query('select join_space($1)',[invite])
-    assert.equal((await pg.query('select title from dates')).rows[0].title,'Cinema')
-    assert.equal((await pg.query('update locations set lat=0 returning *')).rows.length,0)
-    await pg.query("update dates set status='done'")
-    assert.equal((await pg.query('select dashboard() as data')).rows[0].data.categoriesByMonth[0].total,1)
-    await assert.rejects(pg.query('select create_space()'))
-    await login(2)
-    await assert.rejects(pg.query('select join_space($1)',[invite]))
-    await pg.query('select create_space()')
-    for (const table of ['dates','locations']) assert.equal((await pg.query('select * from '+table)).rows.length,0)
-    assert.equal((await pg.query('select * from members')).rows.length,1)
-    assert.equal((await pg.query('select * from spaces')).rows.length,1)
+  await login(0)
+  await pg.query('select create_space()')
+  const { invite } = (await pg.query('select invite from spaces')).rows[0]
+  await pg.query("insert into dates(title,category) values('Cinema','film')")
+  await pg.query('insert into locations(lat,lon) values(52,12)')
+  await login(1)
+  await pg.query('select join_space($1)', [invite])
+  assert.equal((await pg.query('select title from dates')).rows[0].title, 'Cinema')
+  assert.equal((await pg.query('update locations set lat=0 returning *')).rows.length, 0)
+  await pg.query("update dates set status='done'")
+  assert.equal((await pg.query('select dashboard() as data')).rows[0].data.categoriesByMonth[0].total, 1)
+  await assert.rejects(pg.query('select create_space()'))
+  await login(2)
+  await assert.rejects(pg.query('select join_space($1)', [invite]))
+  await pg.query('select create_space()')
+  for (const table of ['dates', 'locations']) {
+    assert.equal((await pg.query('select * from ' + table)).rows.length, 0)
+  }
+  assert.equal((await pg.query('select * from members')).rows.length, 1)
+  assert.equal((await pg.query('select * from spaces')).rows.length, 1)
 })
 
 test('a partner can read the other partner’s location', async () => {

@@ -50,14 +50,14 @@ beforeEach(async () => {
   users = (await pg.query('select id from auth.users order by id')).rows
 }, 15_000)
 
-async function migrate(seedLegacyDates) {
+async function migrate(seedLegacyRows) {
   const migrationFiles = (await readdir(migrations))
     .filter(name => /^\d+_.+\.sql$/.test(name))
     .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }))
   for (const filename of migrationFiles) {
     await pg.exec(await readFile(new URL(filename, migrations), 'utf8'))
-    if (filename === '002_private_gallery.sql' && seedLegacyDates) {
-      await seedLegacyDates()
+    if (filename === '002_private_gallery.sql' && seedLegacyRows) {
+      await seedLegacyRows()
     }
   }
 
@@ -74,10 +74,22 @@ test('reserves the maximum upload size before allocating signed paths', async ()
   await migrate()
   await login(0)
   await pg.query('select create_space()')
-  for (let index = 0; index < 10; index++) {
+  const { data: initial } = (await pg.query("select reserve_photo_upload('image/png', 1) as data")).rows[0]
+  for (let index = 1; index < 10; index++) {
     await pg.query("select reserve_photo_upload('image/png', 1)")
   }
   await assert.rejects(pg.query("select reserve_photo_upload('image/png', 1)"), { code: 'PT409' })
+  await pg.query("insert into storage.objects(bucket_id, name, metadata) values ('gallery', $1, $2)", [
+    initial.path, { size: 1, mimetype: 'image/png' },
+  ])
+  await pg.query('select confirm_photo($1)', [initial.uploadId])
+  await pg.query("delete from storage.objects where bucket_id = 'gallery' and name = $1", [initial.path])
+  await pg.query('select forget_photo($1)', [initial.uploadId])
+  await assert.rejects(pg.query("select reserve_photo_upload('image/png', 1)"), { code: 'PT409' })
+  await pg.exec('reset role')
+  await pg.query("update photo_upload_reservations set hold_until = now() - interval '1 second' where id = $1", [initial.uploadId])
+  await pg.exec('set role authenticated')
+  await pg.query("select reserve_photo_upload('image/png', 1)")
   await login(2)
   await pg.query('select create_space()')
   await pg.query("select reserve_photo_upload('image/png', 1)")
@@ -104,6 +116,30 @@ test('confirms stored photo metadata at most once and isolates foreign spaces', 
   assert.deepEqual((await pg.query('select id from photos')).rows, [])
   await assert.rejects(pg.query('select confirm_photo($1)', [uploadId]), { code: 'PT404' })
   await assert.rejects(pg.query('select forget_photo($1)', [uploadId]), { code: 'PT404' })
+})
+
+test('preserves compatible legacy gallery objects and charges incompatible objects to the quota', async () => {
+  const id = '11111111-1111-4111-8111-111111111111'
+  let path
+  await migrate(async () => {
+    await pg.exec('set role authenticated')
+    await login(0)
+    const { space } = (await pg.query('select create_space() as space')).rows[0]
+    path = space + '/' + id
+    await pg.query("insert into storage.objects(bucket_id, name, metadata, owner_id) values ('gallery', $1, $2, $3)", [
+      path, { size: 10, mimetype: 'image/png' }, users[0].id,
+    ])
+    await pg.query("insert into storage.objects(bucket_id, name) values ('gallery', $1)", [space + '/legacy-missing-metadata'])
+    await pg.exec('reset role')
+  })
+  await login(0)
+  assert.deepEqual((await pg.query('select id, path, size, uploaded_by from photos')).rows, [
+    { id, path, size: 10, uploaded_by: users[0].id },
+  ])
+  for (let index = 0; index < 8; index++) {
+    await pg.query("select reserve_photo_upload('image/png', 1)")
+  }
+  await assert.rejects(pg.query("select reserve_photo_upload('image/png', 1)"), { code: 'PT409' })
 })
 
 test('profiles are visible to the owner and current partner, with owner-only writes', async () => {
@@ -149,9 +185,9 @@ test('leaving removes membership and location and lets the remaining partner re-
   await migrate()
   await login(0)
   await pg.query('select create_space()')
-  const { id, invite } = (await pg.query('select id, invite from spaces')).rows[0]
+  const { invite } = (await pg.query('select invite from spaces')).rows[0]
   await pg.query("insert into dates(title, category) values ('Shared walk', 'walk')")
-  const photo = id + '/11111111-1111-4111-8111-111111111111'
+  const { path: photo } = (await pg.query("select reserve_photo_upload('image/png', 10) as data")).rows[0].data
   await pg.query("insert into storage.objects(bucket_id, name) values ('gallery', $1)", [photo])
   await pg.query('insert into locations(lat, lon) values (52, 12)')
   await pg.query("insert into profiles(display_name) values ('Alex')")
@@ -284,10 +320,11 @@ test('the private gallery allows shared access and enforces space boundaries for
   assert.deepEqual((await pg.query("select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'gallery'")).rows, [
     { public: false, file_size_limit: 5242880, allowed_mime_types: ['image/jpeg', 'image/png', 'image/webp'] }
   ])
-  const photo = id + '/11111111-1111-4111-8111-111111111111'
+  const { path: photo } = (await pg.query("select reserve_photo_upload('image/png', 10) as data")).rows[0].data
   const insertPhoto = name => pg.query("insert into storage.objects(bucket_id, name) values ('gallery', $1)", [name])
   const listPhotos = () => pg.query("select name from storage.objects where bucket_id = 'gallery'")
   const removePhoto = () => pg.query("delete from storage.objects where bucket_id = 'gallery' and name = $1 returning name", [photo])
+  await assert.rejects(insertPhoto(id + '/11111111-1111-4111-8111-111111111111'), { code: '42501' })
   await insertPhoto(photo)
 
   await login(2)

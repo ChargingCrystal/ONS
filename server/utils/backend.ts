@@ -24,7 +24,7 @@ type SupabaseResult<T> = {
   status?: number
 }
 
-export function result<T>(response: SupabaseResult<T>, operation?: 'createSpace' | 'joinSpace' | 'mutateDate' | 'regenerateInvite') {
+export function result<T>(response: SupabaseResult<T>, operation?: 'createSpace' | 'joinSpace' | 'mutateDate' | 'regenerateInvite' | 'photo') {
   if (!response.error) {
     return response.data
   }
@@ -47,6 +47,12 @@ export function result<T>(response: SupabaseResult<T>, operation?: 'createSpace'
   }
   if (operation === 'regenerateInvite' && code === 'PT409') {
     throw toApiError('already_paired')
+  }
+  if (operation === 'photo') {
+    if (code === 'PT403') throw toApiError('no_space')
+    if (code === 'PT404') throw toApiError('not_found')
+    if (code === 'PT400') throw toApiError('validation_failed')
+    if (code === 'PT409') throw toApiError('quota_exceeded')
   }
 
   console.error('Unexpected Supabase request failure', response.error)

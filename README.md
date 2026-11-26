@@ -66,9 +66,10 @@ Send `Authorization: Bearer <access_token>` on authenticated routes and `Accept:
 | `PUT /api/location` | Bearer | JSON `lat` and `lon` | `200` with the saved location row | `validation_failed`, `no_space`, `unauthorized`, `internal` |
 | `DELETE /api/location` | Bearer | — | `204`, including when the caller has no saved location | `unauthorized`, `internal` |
 | `GET /api/dashboard` | Bearer | — | `200` with `serverTime`, `nextMeeting`, and `categoriesByMonth` grouped by UTC month and category key | `unauthorized`, `internal` |
-| `GET /api/photos` | Bearer | Optional `offset` | `200` with up to 30 uploads newest first, with signed URLs valid for five minutes | `validation_failed`, `no_space`, `unauthorized`, `internal` |
-| `POST /api/photos` | Bearer | Raw JPEG, PNG, or WebP bytes with matching `Content-Type`, up to 5 MiB in Nitro | `200` with Storage `id`, `path`, and `fullPath` | `validation_failed`, `no_space`, `unauthorized`, `internal` |
-| `DELETE /api/photos/:name` | Bearer | UUID `name` from the gallery | `204`, including when the name is absent from the caller's gallery | `validation_failed`, `no_space`, `unauthorized`, `internal` |
+| `GET /api/photos` | Bearer | Optional `offset` | `200` with up to 30 confirmed photos newest first. Each includes its metadata and a five-minute signed URL when available. | `validation_failed`, `no_space`, `unauthorized`, `internal` |
+| `POST /api/photos/upload-url` | Bearer | JSON `mime` and `size` in bytes, up to 5 MiB | `200` with `uploadId`, `path`, `signedUrl`, and `token` | `validation_failed`, `quota_exceeded`, `no_space`, `unauthorized`, `internal` |
+| `POST /api/photos/confirm` | Bearer | JSON `uploadId` from the reservation | `200` with the confirmed photo row. The uploader can retry using the same ID. | `validation_failed`, `not_found`, `no_space`, `unauthorized`, `internal` |
+| `DELETE /api/photos/:name` | Bearer | UUID `name` from the gallery | `204` when a confirmed photo is removed | `validation_failed`, `not_found`, `no_space`, `unauthorized`, `internal` |
 
 ### Date category keys
 
@@ -93,6 +94,23 @@ A remaining partner keeps shared dates and photos and can generate another invit
 
 The app does not expose an Auth account-deletion endpoint or require a service-role key in Nitro. [Supabase user deletion](https://supabase.com/docs/guides/auth/managing-user-data#deleting-users)
 
+### Direct photo uploads
+
+1. Send `POST /api/photos/upload-url` with JSON such as `{"mime":"image/png","size":5242880}`. Supported MIME types are `image/jpeg`, `image/png`, and `image/webp`. Use the final compressed file's MIME and size.
+2. Send the bytes directly to the private `gallery` bucket with the Supabase SDK. The signed token is for that path only. Keep it out of application logs.
+
+   ```ts
+   const { error } = await supabase.storage.from('gallery')
+     .uploadToSignedUrl(reservation.path, reservation.token, file, { contentType: file.type })
+   if (error) throw error
+   ```
+
+3. Send `POST /api/photos/confirm` with `{"uploadId":"<reservation UUID>"}`. The server checks the stored MIME and byte count, then returns the registered photo. Retry confirmation with the same ID after an interrupted response. The gallery lists confirmed rows and may return a null URL when a file cannot be signed.
+
+The old binary `POST /api/photos` returns `405`. Both upload POSTs carry JSON so the image bypasses the Vercel Function request-body limit. A space has a **50 MiB** quota. A live upload reservation holds **5 MiB** through the signed token's lifetime and a 15-minute transfer grace period, even after deletion. Unconfirmed objects already in Storage also count. Operators can clean up abandoned objects through Storage once the signing window, token lifetime, and transfer grace period have elapsed. [Supabase signed upload URLs](https://supabase.com/docs/reference/javascript/storage-from-createsigneduploadurl)
+
+Apply migration `005` before serving this API version. Existing gallery objects with a compatible path, MIME, and size are backfilled. Objects without compatible metadata stay in Storage and count toward the quota.
+
 ### Error codes and statuses
 
 | `data.code` | HTTP | Meaning |
@@ -100,8 +118,9 @@ The app does not expose an Auth account-deletion endpoint or require a service-r
 | `invite_invalid` | 400 | The invite is unknown or already consumed. |
 | `already_paired` | 409 | The caller already belongs to a space when creating or joining, or the space already has two members when rotating an invite. |
 | `no_space` | 403 | The operation requires the caller to belong to a space. |
-| `not_found` | 404 | The date is missing or outside the caller's visible rows. |
-| `validation_failed` | 400, 413, 415 | Input is invalid, an upload is too large, or the media type or signature is unsupported. |
+| `not_found` | 404 | A date, photo, or upload is missing or outside the caller's visible rows. |
+| `quota_exceeded` | 409 | The photo space cannot reserve another upload within its quota. |
+| `validation_failed` | 400, 405, 413, 415 | Input is invalid, the removed binary upload route was called, an upload is too large, or the media type is unsupported. |
 | `unauthorized` | 401 | The access token is missing or rejected. |
 | `internal` | 500, 503 | An unexpected server failure occurred or a dependency is unavailable. |
 

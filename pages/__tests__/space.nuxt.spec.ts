@@ -416,6 +416,60 @@ describe('leaving', () => {
   })
 })
 
+describe('keyboard focus', () => {
+  // On Escape the browser closes the dialog by itself, without any button.
+  test('returns to "leave" when the browser closes the dialog', async () => {
+    backend.space = paired()
+    const page = await openWith('Ihr seid verbunden.')
+    await button(page, 'Bereich verlassen').trigger('click')
+    await vi.waitFor(() => expect(dialog(page).open).toBe(true))
+
+    dialog(page).close()
+
+    await vi.waitFor(() => expect(document.activeElement).toBe(button(page, 'Bereich verlassen').element))
+  })
+
+  // A browser takes the focus away from a disabled button. The buttons therefore only
+  // say that they are busy, and ignore further presses.
+  test.each([
+    { label: 'Bereich erstellen', route: 'POST /api/space', space: null },
+    { label: 'Beitreten', route: 'POST /api/space/join', space: null, type: ['Einladungscode', CODE] },
+    { label: 'Neuen Code erzeugen', route: 'POST /api/space/invite', space: alone() },
+    { label: 'Code erzeugen', route: 'POST /api/space/invite', space: alone('Ann', null) },
+    { label: 'Name speichern', route: 'PUT /api/profile', space: alone(null), type: ['Dein Anzeigename', 'Ann'] },
+    { label: 'Bereich verlassen', route: 'GET /api/space', space: paired() },
+    { label: 'Ja, verlassen', route: 'DELETE /api/space/membership', space: paired(), opens: true },
+  ] as const)('stays on $label while the request is running', async ({ label, route, space, ...setup }) => {
+    backend.space = structuredClone(space)
+    const page = await open()
+    await vi.waitFor(() => expect(hasButton(page, label) || hasButton(page, 'Bereich verlassen')).toBe(true))
+    if ('opens' in setup) {
+      await button(page, 'Bereich verlassen').trigger('click')
+      await vi.waitFor(() => expect(dialog(page).open).toBe(true))
+    }
+    if ('type' in setup) {
+      await field(page, setup.type[0]).setValue(setup.type[1])
+    }
+    // Submit buttons are pressed through their form.
+    const press = () => 'type' in setup
+      ? page.get('form').trigger('submit')
+      : button(page, label).trigger('click')
+    const sent = () => backend.requests[route].mock.calls.length
+    const before = sent()
+    const release = backend.holdNext(route)
+
+    await press()
+
+    expect(button(page, label).attributes('aria-disabled')).toBe('true')
+    expect(button(page, label).attributes('disabled')).toBeUndefined()
+    await press()
+    await vi.waitFor(() => expect(sent()).toBe(before + 1))
+    release()
+    await flushPromises()
+    expect(sent()).toBe(before + 1)
+  })
+})
+
 describe('other languages', () => {
   test.each([
     ['en', 'Our space', 'Create a new space'],

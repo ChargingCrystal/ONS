@@ -131,7 +131,7 @@ Apply migration `006` before the frontend depends on `datesByMonth`.
 
 3. Send `POST /api/photos/confirm` with `{"uploadId":"<reservation UUID>"}`. The server checks the stored MIME and byte count, then returns the registered photo. Retry confirmation with the same ID after an interrupted response. The gallery lists confirmed rows and may return a null URL when a file cannot be signed.
 
-The old binary `POST /api/photos` returns `405`. Both upload POSTs carry JSON so the image bypasses the Vercel Function request-body limit. A space has a **50 MiB** quota. A live upload reservation holds **5 MiB** through the signed token's lifetime and a 15-minute transfer grace period, even after deletion. Unconfirmed objects already in Storage also count. Operators can clean up abandoned objects through Storage once the signing window, token lifetime, and transfer grace period have elapsed. [Supabase signed upload URLs](https://supabase.com/docs/reference/javascript/storage-from-createsigneduploadurl)
+The old binary `POST /api/photos` returns `405`. Both upload POSTs carry JSON so the image bypasses the Vercel Function request-body limit. A space has a **50 MiB** quota. An open, unconfirmed upload holds **5 MiB** through the signing window, the signed token's lifetime, and a 15-minute transfer grace period. Confirmation releases the hold and counts the stored file size. Deleting the file frees those bytes immediately. If a hold expires with an unconfirmed file still in Storage, that file counts toward the quota until it is removed. [Supabase signed upload URLs](https://supabase.com/docs/reference/javascript/storage-from-createsigneduploadurl)
 
 Apply migration `005` before serving this API version. Existing gallery objects with a compatible path, MIME, and size are backfilled. Objects without compatible metadata stay in Storage and count toward the quota.
 
@@ -143,7 +143,7 @@ Apply migration `005` before serving this API version. Existing gallery objects 
 | `already_paired` | 409 | The caller already belongs to a space when creating or joining, or the space already has two members when rotating an invite. |
 | `no_space` | 403 | The operation requires the caller to belong to a space. |
 | `not_found` | 404 | A date, photo, or upload is missing or outside the caller's visible rows. |
-| `quota_exceeded` | 409 | The photo space cannot reserve another upload within its quota. |
+| `quota_exceeded` | 409 | Counted Storage bytes, active unconfirmed holds, and a new 5 MiB hold would exceed the space's 50 MiB quota. |
 | `validation_failed` | 400, 405, 413, 415 | Input is invalid, the removed binary upload route was called, an upload is too large, or the media type is unsupported. |
 | `unauthorized` | 401 | The access token is missing or rejected. |
 | `internal` | 500, 503 | An unexpected server failure occurred or a dependency is unavailable. |

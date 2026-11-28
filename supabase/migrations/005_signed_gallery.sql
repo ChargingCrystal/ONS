@@ -69,18 +69,26 @@ begin
   end if;
   requested_at := clock_timestamp();
 
-  -- A live token can upload up to the bucket limit, regardless of the declared file size.
-  select count(*) * 5242880 into held_bytes from public.photo_upload_reservations
-  where space_id = room and hold_until > requested_at;
-  select coalesce(sum(coalesce(public.gallery_object_size(object.metadata), 5242880)), 0)
-    into stored_bytes
-  from storage.objects as object
-  where object.bucket_id = 'gallery' and (storage.foldername(object.name))[1] = room::text
-    and not exists (
-      select 1 from public.photo_upload_reservations as reservation
-      where reservation.space_id = room and reservation.hold_until > requested_at
-        and object.name = room::text || '/' || reservation.id::text
-    );
+  -- Count each active reservation at the bucket limit and all other objects at their stored size.
+  with held_reservations as (
+    select reservation.id
+    from public.photo_upload_reservations as reservation
+    where reservation.space_id = room and reservation.hold_until > requested_at
+      and not reservation.closed
+      and not exists (select 1 from public.photos as photo where photo.id = reservation.id)
+  )
+  select
+    (select count(*) * 5242880 from held_reservations),
+    (
+      select coalesce(sum(coalesce(public.gallery_object_size(object.metadata), 5242880)), 0)
+      from storage.objects as object
+      where object.bucket_id = 'gallery' and (storage.foldername(object.name))[1] = room::text
+        and not exists (
+          select 1 from held_reservations as reservation
+          where object.name = room::text || '/' || reservation.id::text
+        )
+    )
+  into held_bytes, stored_bytes;
   if held_bytes + stored_bytes + 5242880 > 52428800 then
     raise exception 'Photo quota exceeded' using errcode = 'PT409';
   end if;
@@ -125,7 +133,13 @@ begin
     raise exception 'No space' using errcode = 'PT403';
   end if;
   select * into reservation from public.photo_upload_reservations
-  where id = photo_upload_id and space_id = room and uploaded_by = auth.uid() and not closed;
+  where id = photo_upload_id and space_id = room and uploaded_by = auth.uid()
+    and (
+      not closed or exists (
+        select 1 from public.photos as existing_photo
+        where existing_photo.id = photo_upload_id and existing_photo.space_id = room
+      )
+    );
   if not found then
     raise exception 'Upload not found' using errcode = 'PT404';
   end if;
@@ -143,6 +157,8 @@ begin
   insert into public.photos (id, space_id, path, mime, size, uploaded_by)
   values (photo_upload_id, room, object_path, object_mime, object_size, auth.uid())
   on conflict (id) do nothing;
+  update public.photo_upload_reservations set closed = true
+  where id = photo_upload_id and space_id = room and not closed;
   select * into photo from public.photos where id = photo_upload_id and space_id = room;
   return to_jsonb(photo);
 end
@@ -163,7 +179,6 @@ begin
     raise exception 'Photo object still exists';
   end if;
   delete from public.photos where id = photo_id and space_id = room;
-  -- A previously issued token stays accounted for until the hold ends.
   update public.photo_upload_reservations set closed = true where id = photo_id and space_id = room;
 end
 $$;

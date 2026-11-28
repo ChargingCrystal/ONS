@@ -7,7 +7,8 @@
     "dashboard": "Übersicht",
     "dates": "Dates",
     "map": "Karte",
-    "photos": "Fotos"
+    "photos": "Fotos",
+    "space": "Bereich"
   },
   "language": {
     "label": "Sprache"
@@ -44,6 +45,71 @@
     },
     "callback": {
       "title": "Anmeldung"
+    },
+    "space": {
+      "title": "Unser Bereich"
+    }
+  },
+  "space": {
+    "retry": "Erneut versuchen",
+    "status": {
+      "loading": "Euer Bereich wird geladen …",
+      "none": "Du hast noch keinen gemeinsamen Bereich.",
+      "waiting": "Noch fehlt die zweite Person.",
+      "paired": "Ihr seid verbunden."
+    },
+    "create": {
+      "title": "Neuen Bereich erstellen",
+      "hint": "Danach bekommst du einen Einladungscode zum Weitergeben.",
+      "button": "Bereich erstellen"
+    },
+    "join": {
+      "title": "Mit Code beitreten",
+      "code": "Einladungscode",
+      "hint": "Die 32 Zeichen, die du bekommen hast.",
+      "button": "Beitreten"
+    },
+    "invite": {
+      "title": "Einladung",
+      "explanation": "Gib diesen Code an die zweite Person weiter. Er funktioniert nur einmal.",
+      "codeLabel": "Dein Einladungscode",
+      "copy": "Code kopieren",
+      "copied": "Code kopiert.",
+      "copyFailed": "Kopieren hat nicht geklappt. Markiere den Code und kopiere ihn selbst.",
+      "renew": "Neuen Code erzeugen",
+      "renewHint": "Der alte Code wird dann sofort ungültig.",
+      "noCode": "Zurzeit gibt es keinen gültigen Einladungscode.",
+      "create": "Code erzeugen",
+      "gotCode": "Hast du selbst einen Code bekommen? Dann verlasse zuerst diesen Bereich."
+    },
+    "members": {
+      "title": "Mitglieder",
+      "you": "Du",
+      "partner": "Partnerperson",
+      "nameMissing": "Noch kein Name eingetragen"
+    },
+    "name": {
+      "label": "Dein Anzeigename",
+      "hint": "So sieht dich die zweite Person. Höchstens {max} Zeichen.",
+      "save": "Name speichern",
+      "change": "Name ändern",
+      "cancel": "Abbrechen"
+    },
+    "leave": {
+      "open": "Bereich verlassen",
+      "title": "Bereich verlassen?",
+      "paired": "Du verlierst den Zugriff auf eure gemeinsamen Dates und Fotos. Gelöscht werden sie nicht: Sie bleiben im Bereich, und wer ihm später beitritt, kann sie sehen. Dein gespeicherter Standort wird entfernt.",
+      "alone": "Du bist allein in diesem Bereich. Wenn du gehst, kann ihn niemand mehr betreten, auch du nicht. Dates und Fotos werden nicht gelöscht, sind in der App aber nicht mehr erreichbar. Der Einladungscode wird ungültig und dein Standort entfernt.",
+      "confirm": "Ja, verlassen",
+      "cancel": "Bleiben"
+    },
+    "hint": {
+      "none": "Erstelle einen gemeinsamen Bereich oder tritt mit einem Code bei.",
+      "waiting": "Dein Bereich wartet noch auf die zweite Person.",
+      "link": "Zum Bereich"
+    },
+    "notice": {
+      "left": "Du hast den Bereich verlassen."
     }
   },
   "errors": {
@@ -75,7 +141,18 @@
       "emailRequired": "Bitte gib deine E-Mail-Adresse ein.",
       "emailInvalid": "Das ist keine gültige E-Mail-Adresse.",
       "passwordRequired": "Bitte gib dein Passwort ein.",
-      "passwordTooShort": "Das Passwort braucht mindestens {min} Zeichen."
+      "passwordTooShort": "Das Passwort braucht mindestens {min} Zeichen.",
+      "inviteCodeRequired": "Bitte gib den Einladungscode ein.",
+      "inviteCodeShape": "Ein Code hat 32 Zeichen: Ziffern und die Buchstaben a bis f.",
+      "displayNameRequired": "Bitte gib einen Namen ein.",
+      "displayNameTooLong": "Der Name darf höchstens {max} Zeichen lang sein.",
+      "displayNameInvalid": "Bitte gib einen Namen mit 1 bis {max} Zeichen ein."
+    },
+    "space": {
+      "alreadyInSpace": "Du bist schon in einem Bereich.",
+      "inviteInvalid": "Dieser Code funktioniert nicht: Er ist vertippt, schon benutzt oder durch einen neueren ersetzt. Bitte um den aktuellen Code.",
+      "partnerJoined": "Inzwischen ist jemand beigetreten.",
+      "noLongerInSpace": "Du bist in keinem Bereich mehr."
     }
   },
   "auth": {

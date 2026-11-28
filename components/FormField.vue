@@ -11,6 +11,9 @@ const props = defineProps<{
 
 const value = defineModel<string>({ required: true })
 
+// Further attributes, such as autocapitalize, belong on the input, not on the wrapper.
+defineOptions({ inheritAttrs: false })
+
 const id = useId()
 const input = useTemplateRef<HTMLInputElement>('input')
 
@@ -29,6 +32,7 @@ defineExpose({ focus: () => input.value?.focus() })
       class="text-sm font-strong"
     >{{ props.label }}</label>
     <input
+      v-bind="$attrs"
       :id="id"
       ref="input"
       v-model="value"

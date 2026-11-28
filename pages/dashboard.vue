@@ -9,5 +9,6 @@ useHead({ title: () => t('pages.dashboard.title') })
   <section>
     <h1 class="text-2xl">{{ t('pages.dashboard.title') }}</h1>
     <p class="mt-2 text-muted">{{ t('common.comingSoon') }}</p>
+    <SpaceHint />
   </section>
 </template>

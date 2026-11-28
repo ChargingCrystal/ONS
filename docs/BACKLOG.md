@@ -2,7 +2,8 @@
 
 ## Frontend
 
-- **F2 Auth** (register, login, Google sign-in, logout, route protection): claimed by `Filionus`, branch `feat/auth`, in progress.
+- **F2 Auth** (register, login, Google sign-in, logout, route protection): done (PR #7).
+- **F1 Pairing** (create a space, join with an invite, display names, leave a space): claimed by `Filionus`, branch `feat/pairing`, in progress.
 
 ## Backend
 

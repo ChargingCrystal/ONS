@@ -5,11 +5,13 @@ const unexpected = 'errors.unexpected'
 
 // Codes of our backend (shared/api-errors.ts). Only the type is imported,
 // so the validation library behind it stays out of the browser bundle.
-const apiMessages: Record<ApiErrorCode, string> = {
+// quota_exceeded is named separately until the photos branch adds it to the shared list.
+const apiMessages: Record<ApiErrorCode | 'quota_exceeded', string> = {
   invite_invalid: 'errors.api.inviteInvalid',
   already_paired: 'errors.api.alreadyPaired',
   no_space: 'errors.api.noSpace',
   not_found: 'errors.api.notFound',
+  quota_exceeded: 'errors.api.quotaExceeded',
   validation_failed: 'errors.api.validationFailed',
   unauthorized: 'errors.api.unauthorized',
   internal: 'errors.api.internal',

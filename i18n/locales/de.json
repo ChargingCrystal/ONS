@@ -54,6 +54,7 @@
       "alreadyPaired": "Du gehörst bereits zu einem gemeinsamen Bereich.",
       "noSpace": "Erstelle zuerst einen gemeinsamen Bereich oder tritt einem bei.",
       "notFound": "Dieser Eintrag wurde nicht gefunden.",
+      "quotaExceeded": "Der Speicher für eure gemeinsamen Fotos ist voll (50 MB pro Paar). Lösche ein Foto, um Platz zu schaffen.",
       "validationFailed": "Bitte prüfe deine Eingaben.",
       "unauthorized": "Deine Anmeldung ist abgelaufen. Bitte melde dich erneut an.",
       "internal": "Der Server hat gerade ein Problem. Bitte versuche es später erneut."

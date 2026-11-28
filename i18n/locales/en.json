@@ -54,6 +54,7 @@
       "alreadyPaired": "You already belong to a shared space.",
       "noSpace": "Create or join a shared space first.",
       "notFound": "This entry was not found.",
+      "quotaExceeded": "The storage for your shared photos is full (50 MB per couple). Delete a photo to free up space.",
       "validationFailed": "Please check what you entered.",
       "unauthorized": "Your session has ended. Please sign in again.",
       "internal": "The server has a problem right now. Please try again later."

@@ -137,6 +137,36 @@ describe('another person on the same device', () => {
   })
 })
 
+describe('a session that expires on the way', () => {
+  // Twice, because useApi tries once more with a renewed token.
+  function expireOn(route: 'GET /api/space') {
+    backend.failOnce(route, 401, 'unauthorized')
+    backend.failOnce(route, 401, 'unauthorized')
+  }
+
+  test('leaves no message behind while checking before leaving', async () => {
+    backend.space = paired()
+    const space = await loaded()
+    expireOn('GET /api/space')
+
+    await expect(space.checkBeforeLeaving()).resolves.toBe(false)
+
+    expect(currentPath()).toBe('/login')
+    expect(space.notice.value).toBeUndefined()
+  })
+
+  test('leaves no message behind while reloading after an error', async () => {
+    const space = await loaded()
+    backend.failOnce('POST /api/space', 409, 'already_paired')
+    expireOn('GET /api/space')
+
+    await expect(space.create()).resolves.toEqual({ ok: false })
+
+    expect(currentPath()).toBe('/login')
+    expect(space.notice.value).toBeUndefined()
+  })
+})
+
 describe('creating a space', () => {
   test('creates it and waits for a partner', async () => {
     const space = await loaded()

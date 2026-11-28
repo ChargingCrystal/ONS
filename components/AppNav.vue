@@ -8,6 +8,7 @@ const items = [
   { to: '/dates', label: 'nav.dates' },
   { to: '/map', label: 'nav.map' },
   { to: '/photos', label: 'nav.photos' },
+  { to: '/space', label: 'nav.space' },
 ]
 </script>
 

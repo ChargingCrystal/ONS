@@ -7,7 +7,8 @@
     "dashboard": "Overzicht",
     "dates": "Dates",
     "map": "Kaart",
-    "photos": "Foto's"
+    "photos": "Foto's",
+    "space": "Ruimte"
   },
   "language": {
     "label": "Taal"
@@ -44,6 +45,71 @@
     },
     "callback": {
       "title": "Inloggen"
+    },
+    "space": {
+      "title": "Onze ruimte"
+    }
+  },
+  "space": {
+    "retry": "Opnieuw proberen",
+    "status": {
+      "loading": "Jullie ruimte wordt geladen …",
+      "none": "Je hebt nog geen gedeelde ruimte.",
+      "waiting": "Nog even wachten op je partner.",
+      "paired": "Jullie zijn verbonden."
+    },
+    "create": {
+      "title": "Een nieuwe ruimte aanmaken",
+      "hint": "Daarna krijg je een uitnodigingscode om door te geven.",
+      "button": "Ruimte aanmaken"
+    },
+    "join": {
+      "title": "Meedoen met een code",
+      "code": "Uitnodigingscode",
+      "hint": "De 32 tekens die je hebt gekregen.",
+      "button": "Meedoen"
+    },
+    "invite": {
+      "title": "Uitnodiging",
+      "explanation": "Geef deze code door aan je partner. De code werkt maar één keer.",
+      "codeLabel": "Je uitnodigingscode",
+      "copy": "Code kopiëren",
+      "copied": "Code gekopieerd.",
+      "copyFailed": "Kopiëren is niet gelukt. Selecteer de code en kopieer die zelf.",
+      "renew": "Nieuwe code maken",
+      "renewHint": "De oude code werkt dan meteen niet meer.",
+      "noCode": "Er is op dit moment geen geldige uitnodigingscode.",
+      "create": "Code maken",
+      "gotCode": "Heb je zelf een code gekregen? Verlaat dan eerst deze ruimte."
+    },
+    "members": {
+      "title": "Leden",
+      "you": "Jij",
+      "partner": "Je partner",
+      "nameMissing": "Nog geen naam ingevuld"
+    },
+    "name": {
+      "label": "Je weergavenaam",
+      "hint": "Zo ziet je partner jou. Maximaal {max} tekens.",
+      "save": "Naam opslaan",
+      "change": "Naam wijzigen",
+      "cancel": "Annuleren"
+    },
+    "leave": {
+      "open": "Ruimte verlaten",
+      "title": "Deze ruimte verlaten?",
+      "paired": "Je verliest de toegang tot jullie gedeelde dates en foto's. Ze worden niet verwijderd: ze blijven in de ruimte, en wie later meedoet, kan ze zien. Je opgeslagen locatie wordt verwijderd.",
+      "alone": "Je bent alleen in deze ruimte. Als je weggaat, kan niemand er meer in, jij ook niet. Dates en foto's worden niet verwijderd, maar zijn in de app niet meer bereikbaar. De uitnodigingscode werkt niet meer en je locatie wordt verwijderd.",
+      "confirm": "Ja, verlaten",
+      "cancel": "Blijven"
+    },
+    "hint": {
+      "none": "Maak een gedeelde ruimte aan of doe mee met een code.",
+      "waiting": "Je ruimte wacht nog op je partner.",
+      "link": "Naar de ruimte"
+    },
+    "notice": {
+      "left": "Je hebt de ruimte verlaten."
     }
   },
   "errors": {
@@ -75,7 +141,18 @@
       "emailRequired": "Vul je e-mailadres in.",
       "emailInvalid": "Dit is geen geldig e-mailadres.",
       "passwordRequired": "Vul je wachtwoord in.",
-      "passwordTooShort": "Het wachtwoord moet minstens {min} tekens hebben."
+      "passwordTooShort": "Het wachtwoord moet minstens {min} tekens hebben.",
+      "inviteCodeRequired": "Vul de uitnodigingscode in.",
+      "inviteCodeShape": "Een code heeft 32 tekens: cijfers en de letters a tot en met f.",
+      "displayNameRequired": "Vul een naam in.",
+      "displayNameTooLong": "De naam mag maximaal {max} tekens lang zijn.",
+      "displayNameInvalid": "Vul een naam in van 1 tot {max} tekens."
+    },
+    "space": {
+      "alreadyInSpace": "Je zit al in een ruimte.",
+      "inviteInvalid": "Deze code werkt niet: verkeerd getypt, al gebruikt of vervangen door een nieuwere. Vraag om de huidige code.",
+      "partnerJoined": "Intussen is er iemand bijgekomen.",
+      "noLongerInSpace": "Je zit niet meer in een ruimte."
     }
   },
   "auth": {

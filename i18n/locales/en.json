@@ -7,7 +7,8 @@
     "dashboard": "Overview",
     "dates": "Dates",
     "map": "Map",
-    "photos": "Photos"
+    "photos": "Photos",
+    "space": "Space"
   },
   "language": {
     "label": "Language"
@@ -44,6 +45,71 @@
     },
     "callback": {
       "title": "Signing in"
+    },
+    "space": {
+      "title": "Our space"
+    }
+  },
+  "space": {
+    "retry": "Try again",
+    "status": {
+      "loading": "Loading your space …",
+      "none": "You do not have a shared space yet.",
+      "waiting": "Waiting for your partner.",
+      "paired": "You are connected."
+    },
+    "create": {
+      "title": "Create a new space",
+      "hint": "Afterwards you get an invite code to pass on.",
+      "button": "Create space"
+    },
+    "join": {
+      "title": "Join with a code",
+      "code": "Invite code",
+      "hint": "The 32 characters you were given.",
+      "button": "Join"
+    },
+    "invite": {
+      "title": "Invitation",
+      "explanation": "Pass this code on to your partner. It works only once.",
+      "codeLabel": "Your invite code",
+      "copy": "Copy code",
+      "copied": "Code copied.",
+      "copyFailed": "Copying did not work. Select the code and copy it yourself.",
+      "renew": "Create a new code",
+      "renewHint": "The old code stops working immediately.",
+      "noCode": "There is no valid invite code right now.",
+      "create": "Create code",
+      "gotCode": "Did you get a code yourself? Then leave this space first."
+    },
+    "members": {
+      "title": "Members",
+      "you": "You",
+      "partner": "Your partner",
+      "nameMissing": "No name set yet"
+    },
+    "name": {
+      "label": "Your display name",
+      "hint": "This is how your partner sees you. {max} characters at most.",
+      "save": "Save name",
+      "change": "Change name",
+      "cancel": "Cancel"
+    },
+    "leave": {
+      "open": "Leave space",
+      "title": "Leave this space?",
+      "paired": "You lose access to your shared dates and photos. They are not deleted: they stay in the space, and whoever joins it later can see them. Your saved location is removed.",
+      "alone": "You are the only person in this space. If you leave, nobody can get into it again, not even you. Dates and photos are not deleted, but they can no longer be reached in the app. The invite code stops working and your location is removed.",
+      "confirm": "Yes, leave",
+      "cancel": "Stay"
+    },
+    "hint": {
+      "none": "Create a shared space or join one with a code.",
+      "waiting": "Your space is still waiting for your partner.",
+      "link": "Go to the space"
+    },
+    "notice": {
+      "left": "You have left the space."
     }
   },
   "errors": {
@@ -75,7 +141,18 @@
       "emailRequired": "Please enter your email address.",
       "emailInvalid": "That is not a valid email address.",
       "passwordRequired": "Please enter your password.",
-      "passwordTooShort": "The password needs at least {min} characters."
+      "passwordTooShort": "The password needs at least {min} characters.",
+      "inviteCodeRequired": "Please enter the invite code.",
+      "inviteCodeShape": "A code has 32 characters: digits and the letters a to f.",
+      "displayNameRequired": "Please enter a name.",
+      "displayNameTooLong": "The name can have {max} characters at most.",
+      "displayNameInvalid": "Please enter a name with 1 to {max} characters."
+    },
+    "space": {
+      "alreadyInSpace": "You are already in a space.",
+      "inviteInvalid": "This code does not work: it is mistyped, already used or replaced by a newer one. Ask for the current code.",
+      "partnerJoined": "Someone has joined in the meantime.",
+      "noLongerInSpace": "You are no longer in a space."
     }
   },
   "auth": {

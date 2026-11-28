@@ -25,14 +25,14 @@ supabase migration list --remote
 supabase db push --dry-run --remote
 ```
 
-Read the dry run. On a fresh project the current repository should show `001_couple_planner.sql` followed by `002_private_gallery.sql`. If the target or migration history is unexpected, resolve it before proceeding. After approving the push, apply exactly the reviewed migrations and check the result.
+Read the dry run. A fresh project should show all checked-in migrations in order, starting with `001_couple_planner.sql`, `002_private_gallery.sql`, and `003_date_categories.sql`. If the target or migration history is unexpected, resolve it before proceeding. After approving the push, apply exactly the reviewed migrations and check the result.
 
 ```bash
 supabase db push --remote
 supabase migration list --remote
 ```
 
-Both versions should now appear in the remote column. In Supabase, check **Table Editor → public** for `spaces`, `members`, `dates`, and `locations`, then **Storage → Buckets** for the private `gallery` bucket. Keep schema changes in migrations and leave seed data out of production. These examples use the Supabase CLI v3 remote flags. [Supabase migration workflow](https://supabase.com/docs/guides/local-development/cli-workflows#pushing-to-a-remote-project)
+All checked-in versions should now appear in the remote column. In Supabase, check **Table Editor → public** for `spaces`, `members`, `dates`, and `locations`, then **Storage → Buckets** for the private `gallery` bucket. Keep schema changes in migrations and leave seed data out of production. These examples use the Supabase CLI v3 remote flags. [Supabase migration workflow](https://supabase.com/docs/guides/local-development/cli-workflows#pushing-to-a-remote-project)
 
 ## 3. Import the app into Vercel
 
@@ -107,12 +107,13 @@ Both versions should now appear in the remote column. In Supabase, check **Table
 
 3. Expect HTTP `200`, a `serverTime` timestamp, `nextMeeting: null`, and `categoriesByMonth: []` for a fresh unpaired account. A `401` can mean a missing or rejected bearer token, or Vercel protection if the response is a Vercel page. A JSON `503 internal` points to missing runtime config or an unavailable dependency. Check the deployment's environment variables, region, logs, and the Supabase project's status. Clear the token with `unset ACCESS_TOKEN` after the check.
 
-## 5. Configure application URLs and Google OAuth
+## 5. Configure hosted Auth and Google OAuth
 
-1. In **Supabase → Authentication → URL Configuration**, set **Site URL** to the canonical Production HTTPS origin. Under **Redirect URLs**, add the exact app URL used by `redirectTo`, including its path and trailing slash. For example, if the app returns to the root, add `https://ons.example.com/`. For the isolated Preview backend, add the exact URL for that branch's login return. Prefer a stable branch URL or Preview custom domain so the allowed URL survives redeploys. Add `http://localhost:3000/` only to the backend used for local sign-in tests. [Supabase redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls)
-2. In **Supabase → Authentication → Sign In / Providers → Google**, copy the provider's **Callback URL**, normally `https://<project-ref>.supabase.co/auth/v1/callback`. In [Google Auth Platform](https://console.cloud.google.com/auth/overview), choose the intended Google Cloud project, set up **Branding** and **Audience**, and add your demo accounts as **Test users** while the OAuth app is in Testing.
-3. Open **Clients → Create client → Web application**. Under **Authorized JavaScript origins**, add the HTTPS app origins you will actually use, without a path. Under **Authorized redirect URIs**, paste the exact **Supabase** callback URL from the previous step. Select **Create** and copy the client ID and secret to the Google provider settings in Supabase. Enable the provider and save. For a separate Preview backend, use its own callback and provider settings. [Supabase Google sign-in setup](https://supabase.com/docs/guides/auth/social-sign-in/auth-google)
-4. The frontend can call `signInWithOAuth({ provider: 'google', options: { redirectTo: '<allowed app URL>' } })`. Keep the return on the same app origin that starts the flow so the browser retains the PKCE verifier. The current checkout has the Supabase client but no Google sign-in UI. Verify the full return flow once the frontend wires it up.
+1. In the hosted project's **Authentication → Sign In / Providers → Email** settings, enable Email and set **Minimum password length** to **8** to match the app and local Auth. Keep email confirmation enabled for public signups. Local `supabase/config.toml` does not apply these settings to the hosted project. [Supabase password settings](https://supabase.com/docs/guides/auth/password-security)
+2. In **Authentication → URL Configuration**, set **Site URL** to the canonical Production HTTPS origin. Under **Redirect URLs**, add the exact `https://<app-domain>/auth/callback` URL without a trailing slash or language prefix. Email confirmation and Google both use this path. For an isolated Preview backend, allow the exact callback on the stable Preview origin. The local callback is `http://localhost:3000/auth/callback`. [Supabase redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls)
+3. In **Authentication → Sign In / Providers → Google**, copy the provider's **Callback URL**, normally `https://<project-ref>.supabase.co/auth/v1/callback`. In [Google Auth Platform](https://console.cloud.google.com/auth/overview), choose the intended Google Cloud project, set up **Branding** and **Audience**, and add demo accounts under **Test users** while the OAuth app is in Testing.
+4. Open **Clients → Create client → Web application**. Under **Authorized JavaScript origins**, add the HTTPS app origins you will actually use, without a path. Under **Authorized redirect URIs**, paste the exact **Supabase** callback URL from the previous step. Select **Create** and copy the client ID and secret to the Google provider settings in Supabase. Enable the provider and save. For a separate Preview backend, use its own callback and provider settings. [Supabase Google sign-in setup](https://supabase.com/docs/guides/auth/social-sign-in/auth-google)
+5. From a signed-out browser, test the Google button and email confirmation separately. Return to the same app origin that started the flow so the browser retains the PKCE verifier. The app should land on `/auth/callback` and then navigate to the localized dashboard.
 
 ## 6. Add a custom domain when ready
 
@@ -141,5 +142,5 @@ The local verification passed all 52 tests. The Vercel build emitted `.vercel/ou
 | Cold starts and inactivity | Measure the first request and an authenticated request before the demo. Supabase Free projects can pause after one week of inactivity, and the process health check will still be green while the database is unavailable. Check the project from the dashboard before the demo. [Supabase Free pricing](https://supabase.com/pricing) |
 | Free-tier limits | Supabase Free currently lists two active projects, a 500 MB database, 1 GB file storage, and separate 5 GB egress and cached-egress allowances. Vercel Hobby is for personal, non-commercial use and has usage caps. Confirm the intended use fits the plan. [Supabase pricing](https://supabase.com/pricing) · [Vercel Hobby](https://vercel.com/docs/plans/hobby) |
 | Photo uploads | Vercel's default function request limit is 4.5 MB. The app accepts up to 5 MiB, so some uploads can receive `413` before Nitro handles them. Use smaller demo photos until B1 moves uploads directly to Storage. [Vercel Functions limits](https://vercel.com/docs/functions/limitations#request-body-size) |
-| Google and email | Decide whether Google is limited to demo test users and whether it ships before the sign-in UI is ready. Configure custom SMTP before relying on email confirmation or password reset for users outside the Supabase organization. [Supabase SMTP guide](https://supabase.com/docs/guides/auth/auth-smtp) |
+| Google and email | Decide whether to limit Google sign-in to demo test users. Google requires OAuth client credentials before you can enable the provider. Configure custom SMTP before relying on email confirmation or password reset for users outside the Supabase organization. [Supabase SMTP guide](https://supabase.com/docs/guides/auth/auth-smtp) |
 | Domain | Use the generated Vercel URL for the initial check. Choose and approve a custom domain before changing DNS or canonical Auth redirects. |

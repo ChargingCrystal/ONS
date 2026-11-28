@@ -29,6 +29,7 @@ async function visit(path: string, { saved, browser }: Visitor = {}) {
   return {
     status: response.status,
     location: response.headers.get('location'),
+    contentType: response.headers.get('content-type') ?? '',
     cookie: response.headers.get('set-cookie') ?? '',
     body: await response.text(),
   }
@@ -128,9 +129,13 @@ describe('the sign-in return page', () => {
 })
 
 describe('API routes', () => {
+  // The status depends on the database: 200 if it answers, 503 if not.
+  // Both come from the API itself, which is all this test needs.
   test('are never redirected to a language prefix', async () => {
     const response = await visit('/api/health', { saved: 'nl', browser: 'nl-NL' })
-    expect(response.status).toBe(200)
-    expect(JSON.parse(response.body)).toEqual({ status: 'ok' })
+    expect(response.location).toBeNull()
+    expect([200, 503]).toContain(response.status)
+    // A page of the app would be HTML, so JSON shows that the API route answered.
+    expect(response.contentType).toContain('application/json')
   })
 })

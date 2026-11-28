@@ -389,6 +389,19 @@ describe('leaving', () => {
     await vi.waitFor(() => expect(document.activeElement).toBe(page.get('h1').element))
   })
 
+  test('does not repeat an old message when the page is opened again', async () => {
+    backend.space = paired()
+    const first = await openWith('Ihr seid verbunden.')
+    await askToLeave(first)
+    await button(first, 'Ja, verlassen').trigger('click')
+    await shows(first, 'Du hast den Bereich verlassen.')
+    first.unmount()
+
+    const second = await openWith('Neuen Bereich erstellen')
+
+    expect(second.text()).not.toContain('Du hast den Bereich verlassen.')
+  })
+
   test('stays and says why when leaving fails', async () => {
     backend.space = paired()
     const page = await openWith('Ihr seid verbunden.')

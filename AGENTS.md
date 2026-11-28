@@ -72,8 +72,7 @@ npm run build                   # Nuxt/Nitro production build
 
 - On Windows, run npm from a path with an upper-case drive letter (`E:\...`, not `e:\...`). Otherwise Vitest
   fails with "failed to find the runner".
-- CI uses npm 10 (Node 22). After adding or updating a package with npm 11, run
-  `npx npm@10 install --package-lock-only`, otherwise `npm ci` can fail in CI.
+- CI and Vercel use Node 24.x. Use that major locally when updating the lockfile and verify it with `npm ci`.
 
 ## Test-driven development (applies to everyone)
 

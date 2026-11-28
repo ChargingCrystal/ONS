@@ -1,6 +1,6 @@
 # Deploy Ons to Vercel and Supabase
 
-Start with a reviewed commit on `main`, a GitHub account with access to the repository, and accounts on Supabase and Vercel. Use Node 24.x to reproduce the verified Vercel build and install the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) for migrations. The commands below use Bash, such as Git Bash on Windows. The smoke commands also use `curl` and `jq`.
+Start with a reviewed commit on `main`, a GitHub account with access to the repository, and accounts on Supabase and Vercel. Use Node 24.x locally to match CI and the Vercel build. Install the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started) for migrations. The commands below use Bash, such as Git Bash on Windows. The smoke commands also use `curl` and `jq`.
 
 **Approval checkpoint.** Project creation, granting GitHub access, storing credentials, applying hosted migrations, deploying, configuring OAuth, and assigning domains are separate cloud actions. The steps below are for the project owner to perform. In a brand-new Vercel project, the first deployment is classified as **Production** and uses Production variables. Confirm that first deployment before selecting **Deploy**. The next deployment from a non-production branch can be a Preview. [Vercel deployment environments](https://vercel.com/docs/deployments/environments#first-deployment)
 

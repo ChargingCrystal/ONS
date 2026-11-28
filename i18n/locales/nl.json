@@ -54,6 +54,7 @@
       "alreadyPaired": "Je hoort al bij een gedeelde ruimte.",
       "noSpace": "Maak eerst een gedeelde ruimte aan of sluit je bij een aan.",
       "notFound": "Dit item is niet gevonden.",
+      "quotaExceeded": "De opslag voor jullie gedeelde foto's is vol (50 MB per stel). Verwijder een foto om ruimte vrij te maken.",
       "validationFailed": "Controleer je invoer.",
       "unauthorized": "Je sessie is verlopen. Log opnieuw in.",
       "internal": "De server heeft nu een probleem. Probeer het later opnieuw."

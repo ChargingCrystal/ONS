@@ -1,5 +1,5 @@
-import { mockNuxtImport, mountSuspended } from '@nuxt/test-utils/runtime'
-import { enableAutoUnmount } from '@vue/test-utils'
+import { mockNuxtImport } from '@nuxt/test-utils/runtime'
+import { enableAutoUnmount, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { defineComponent } from 'vue'
 import type { SpaceResponse } from '../../shared/api-contract'
@@ -41,8 +41,9 @@ function show(space: SpaceResponse | null) {
 
 const pass = (milliseconds: number) => vi.advanceTimersByTimeAsync(milliseconds)
 
+// Plain mount: mountSuspended waits for timers, which are faked here.
 async function openPage() {
-  const page = await mountSuspended(defineComponent({
+  const page = mount(defineComponent({
     setup() {
       useSpaceAutoRefresh(refresh)
       return () => null

@@ -48,7 +48,12 @@ describe('display names', () => {
     expect(displayNameError(` ${'a'.repeat(DISPLAY_NAME_MAX)} `)).toBeUndefined()
   })
 
-  // Emoji count twice in the contract, so they are the interesting case.
+  // "length" counts most emoji twice, but the contract and the database count them once.
+  test('count an emoji as one character', () => {
+    expect(displayNameError('💜'.repeat(DISPLAY_NAME_MAX))).toBeUndefined()
+    expect(displayNameError('💜'.repeat(DISPLAY_NAME_MAX + 1))).toBe('errors.form.displayNameTooLong')
+  })
+
   test.each([
     '',
     '   ',
@@ -57,6 +62,8 @@ describe('display names', () => {
     'a'.repeat(61),
     '💜'.repeat(30),
     '💜'.repeat(31),
+    '💜'.repeat(60),
+    '💜'.repeat(61),
   ])('agree with the contract (%j)', (name) => {
     const accepted = updateProfileRequestSchema.safeParse({ display_name: name }).success
     expect(displayNameError(name) === undefined).toBe(accepted)

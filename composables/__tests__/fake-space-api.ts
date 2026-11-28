@@ -47,6 +47,11 @@ export function fakeSpaceApi() {
     failOnce(route: Route, status: number, code: string) {
       failures.set(route, [...(failures.get(route) ?? []), { status, code }])
     },
+    // $fetch repeats a failed GET once, so loading only fails if both attempts do.
+    failLoading() {
+      backend.failOnce('GET /api/space', 500, 'internal')
+      backend.failOnce('GET /api/space', 500, 'internal')
+    },
     // Holds back the next answer of this route until the returned function is called.
     holdNext(route: Route) {
       let release = () => {}

@@ -64,7 +64,7 @@ describe('loading', () => {
   })
 
   test('reports a first load that fails', async () => {
-    backend.failOnce('GET /api/space', 500, 'internal')
+    backend.failLoading()
 
     const space = useSpace()
 
@@ -75,9 +75,9 @@ describe('loading', () => {
   test('keeps what it knows when a later load fails', async () => {
     backend.space = waiting()
     const space = await loaded()
-    backend.failOnce('GET /api/space', 500, 'internal')
+    backend.failLoading()
 
-    await space.refresh()
+    await expect(space.refresh()).resolves.toBe(false)
 
     expect(space.state.value.status).toBe('waiting')
     expect(space.notice.value).toBeUndefined()
@@ -170,7 +170,7 @@ describe('creating a space', () => {
   // Showing the old state would invite a second attempt.
   test('does not keep the old state when reloading fails afterwards', async () => {
     const space = await loaded()
-    backend.failOnce('GET /api/space', 500, 'internal')
+    backend.failLoading()
 
     await expect(space.create()).resolves.toEqual({ ok: true })
 
@@ -340,7 +340,7 @@ describe('leaving a space', () => {
   test('does not ask when the current state cannot be read', async () => {
     backend.space = paired()
     const space = await loaded()
-    backend.failOnce('GET /api/space', 500, 'internal')
+    backend.failLoading()
 
     await expect(space.checkBeforeLeaving()).resolves.toBe(false)
 

@@ -21,7 +21,15 @@ const coordinates = { lat: 52, lon: 12 }
 const partner = { user_id: id, ...coordinates }
 const date = { id, space_id: id, title: 'Cinema', category: 'movie', status: 'planned', meeting_at: null, created_at: now }
 const space = { id, invite, members: [{ user_id: id, slot: 1, display_name: null }] }
-const dashboard = { serverTime: now, nextMeeting: null, categoriesByMonth: [{ month: '2026-11', category: 'movie', total: 1 }] }
+const dashboard = {
+  serverTime: now,
+  nextMeeting: null,
+  categoriesByMonth: [{ month: '2026-11', category: 'movie', total: 1 }],
+  datesByMonth: Array.from({ length: 12 }, (_, index) => ({
+    month: new Date(Date.UTC(2026, index - 1, 1)).toISOString().slice(0, 7),
+    total: index === 11 ? 1 : 0,
+  })),
+}
 const photo = { id, path: id + '/' + id, fullPath: 'gallery/' + id + '/' + id }
 
 beforeAll(async () => {
@@ -160,6 +168,13 @@ test('returns internal when Supabase configuration is unavailable', async () => 
 test('returns internal for unexpected upstream errors without claiming a pairing conflict', async () => {
   postgresError('23505', 409)
   await expectError(await request('GET', '/dashboard'), 500, 'internal')
+})
+
+test('the shared dashboard contract includes all monthly totals in the HTTP response', async () => {
+  upstream.mockResolvedValueOnce(Response.json(dashboard))
+  const response = await request('GET', '/dashboard')
+  expect(response.status).toBe(200)
+  expect(contract.dashboardResponseSchema.parse(await response.json())).toEqual(dashboard)
 })
 
 test.each([

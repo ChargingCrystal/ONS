@@ -111,6 +111,31 @@ The old binary `POST /api/photos` returns `405`. Both upload POSTs carry JSON so
 
 Apply migration `005` before serving this API version. Existing gallery objects with a compatible path, MIME, and size are backfilled. Objects without compatible metadata stay in Storage and count toward the quota.
 
+### Live updates
+
+After applying migration `008`, use the signed-in Supabase client to subscribe to the private Broadcast topic `ons:user:<user-id>`. Use the Auth user ID from the current session. The app sends `{}` as the payload. Supabase may add a generated message `id`, which the app can ignore. Refresh the affected views through `useApi()` when the event arrives.
+
+| Source table | Broadcast event | Requests to refresh |
+| --- | --- | --- |
+| `public.dates` | `dates.changed` | `GET /api/dates` and `GET /api/dashboard` |
+| `public.photos` | `photos.changed` | `GET /api/photos` |
+| `public.locations` | `locations.changed` | `GET /api/location` |
+
+```ts
+const channel = supabase.channel(`ons:user:${session.user.id}`, { config: { private: true } })
+  .on('broadcast', { event: 'dates.changed' }, () => refreshDatesAndDashboard())
+  .on('broadcast', { event: 'photos.changed' }, () => refreshPhotos())
+  .on('broadcast', { event: 'locations.changed' }, () => refreshLocation())
+  .subscribe()
+
+// When the session ends or the subscription owner unmounts:
+await supabase.removeChannel(channel)
+```
+
+Fetch current data on initial load and after reconnecting. Refresh or clear the local space views after the user joins or leaves. Refresh signals represent committed changes and may be missed while disconnected. Uploading a file to Storage emits a photo refresh only when its metadata is confirmed in Postgres.
+
+To run the live isolation test, apply all migrations to a disposable local Supabase stack on `127.0.0.1:54321`. Set `ONS_REALTIME_TEST_KEY` to its publishable or anon key from `supabase status`, then run `npm test -- --project backend tests/realtime.live.test.mjs`. The test creates three local Auth users. [Supabase Realtime Broadcast](https://supabase.com/docs/guides/realtime/broadcast)
+
 ### Error codes and statuses
 
 | `data.code` | HTTP | Meaning |

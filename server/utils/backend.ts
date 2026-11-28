@@ -24,7 +24,7 @@ type SupabaseResult<T> = {
   status?: number
 }
 
-export function result<T>(response: SupabaseResult<T>, operation?: 'createSpace' | 'joinSpace' | 'mutateDate') {
+export function result<T>(response: SupabaseResult<T>, operation?: 'createSpace' | 'joinSpace' | 'mutateDate' | 'regenerateInvite') {
   if (!response.error) {
     return response.data
   }
@@ -41,6 +41,12 @@ export function result<T>(response: SupabaseResult<T>, operation?: 'createSpace'
   }
   if (operation === 'mutateDate' && code === 'PGRST116') {
     throw toApiError('not_found')
+  }
+  if (operation === 'regenerateInvite' && code === 'PT403') {
+    throw toApiError('no_space')
+  }
+  if (operation === 'regenerateInvite' && code === 'PT409') {
+    throw toApiError('already_paired')
   }
 
   console.error('Unexpected Supabase request failure', response.error)

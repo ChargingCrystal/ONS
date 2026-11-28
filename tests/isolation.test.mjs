@@ -67,6 +67,122 @@ afterEach(async () => {
 
 const login = i => pg.query("select set_config('request.jwt.claim.sub',$1,false)", [users[i].id])
 
+test('profiles are visible to the owner and current partner, with owner-only writes', async () => {
+  await migrate()
+  await login(0)
+  await pg.query("insert into profiles(display_name) values ('Alex')")
+  await pg.query('select create_space()')
+  const { invite } = (await pg.query('select invite from spaces')).rows[0]
+  await login(1)
+  await pg.query('select join_space($1)', [invite])
+  assert.deepEqual((await pg.query('select display_name from profiles')).rows, [{ display_name: 'Alex' }])
+  const { data } = (await pg.query('select space_details() as data')).rows[0]
+  assert.deepEqual(data.members, [
+    { user_id: users[0].id, slot: 1, display_name: 'Alex' },
+    { user_id: users[1].id, slot: 2, display_name: null },
+  ])
+  assert.deepEqual((await pg.query("update profiles set display_name = 'Changed' returning display_name")).rows, [])
+  await assert.rejects(pg.query("insert into profiles(display_name) values (' Sam ')"), { code: '23514' })
+  await pg.query("insert into profiles(display_name) values ('Sam')")
+  await pg.query("insert into profiles(display_name) values ('Sammy') on conflict (user_id) do update set display_name = excluded.display_name")
+  assert.deepEqual((await pg.query('select my_profile() as data')).rows[0].data, { display_name: 'Sammy' })
+  await login(2)
+  assert.deepEqual((await pg.query('select display_name from profiles')).rows, [])
+  await pg.exec('set role anon')
+  await assert.rejects(pg.query('select display_name from profiles'), { code: '42501' })
+})
+
+test('a sole member can rotate the invite and a full space cannot issue another', async () => {
+  await migrate()
+  await login(0)
+  await assert.rejects(pg.query('select regenerate_invite()'), { code: 'PT403' })
+  await pg.query('select create_space()')
+  const { invite: oldInvite } = (await pg.query('select invite from spaces')).rows[0]
+  const { invite } = (await pg.query('select regenerate_invite() as invite')).rows[0]
+  assert.notEqual(invite, oldInvite)
+  await login(1)
+  await assert.rejects(pg.query('select join_space($1)', [oldInvite]), { code: '22023' })
+  await pg.query('select join_space($1)', [invite])
+  await assert.rejects(pg.query('select regenerate_invite()'), { code: 'PT409' })
+})
+
+test('leaving removes membership and location and lets the remaining partner re-invite', async () => {
+  await migrate()
+  await login(0)
+  await pg.query('select create_space()')
+  const { id, invite } = (await pg.query('select id, invite from spaces')).rows[0]
+  await pg.query("insert into dates(title, category) values ('Shared walk', 'walk')")
+  const photo = id + '/11111111-1111-4111-8111-111111111111'
+  await pg.query("insert into storage.objects(bucket_id, name) values ('gallery', $1)", [photo])
+  await pg.query('insert into locations(lat, lon) values (52, 12)')
+  await pg.query("insert into profiles(display_name) values ('Alex')")
+  await login(1)
+  await pg.query('select join_space($1)', [invite])
+  await pg.query('insert into locations(lat, lon) values (53, 13)')
+  await login(0)
+  await pg.query('select leave_space()')
+  await pg.query('select leave_space()')
+  assert.deepEqual((await pg.query('select title from dates')).rows, [])
+  assert.deepEqual((await pg.query('select name from storage.objects')).rows, [])
+  await login(1)
+  assert.deepEqual((await pg.query('select title from dates')).rows, [{ title: 'Shared walk' }])
+  assert.deepEqual((await pg.query('select name from storage.objects')).rows, [{ name: photo }])
+  assert.deepEqual((await pg.query('select user_id from locations')).rows, [{ user_id: users[1].id }])
+  assert.deepEqual((await pg.query('select display_name from profiles')).rows, [])
+  const { invite: replacement } = (await pg.query('select regenerate_invite() as invite')).rows[0]
+  await login(2)
+  await pg.query('select join_space($1)', [replacement])
+  await pg.query('select leave_space()')
+  await login(1)
+  const { invite: finalInvite } = (await pg.query('select regenerate_invite() as invite')).rows[0]
+  await pg.query('select leave_space()')
+  await login(2)
+  await assert.rejects(pg.query('select join_space($1)', [finalInvite]), { code: '22023' })
+})
+
+test('a user can delete only their own location and can repeat the deletion', async () => {
+  await migrate()
+  await login(0)
+  await pg.query('select create_space()')
+  const { invite } = (await pg.query('select invite from spaces')).rows[0]
+  await pg.query('insert into locations(lat, lon) values (52, 12)')
+  await login(1)
+  await pg.query('select join_space($1)', [invite])
+  await pg.query('insert into locations(lat, lon) values (53, 13)')
+  assert.deepEqual((await pg.query('delete from locations where user_id = $1 returning user_id', [users[0].id])).rows, [])
+  await pg.query('select delete_my_location()')
+  await pg.query('select delete_my_location()')
+  assert.deepEqual((await pg.query('select user_id from locations')).rows, [{ user_id: users[0].id }])
+})
+
+test('operator Auth deletion removes personal rows while the surviving partner can pair again', async () => {
+  await migrate()
+  await login(0)
+  await pg.query('select create_space()')
+  const { invite } = (await pg.query('select invite from spaces')).rows[0]
+  await pg.query("insert into profiles(display_name) values ('Alex')")
+  await pg.query('insert into locations(lat, lon) values (52, 12)')
+  await login(1)
+  await pg.query('select join_space($1)', [invite])
+  await pg.exec('reset role')
+  await pg.query('delete from auth.users where id = $1', [users[0].id])
+  for (const table of ['profiles', 'members', 'locations']) {
+    assert.deepEqual((await pg.query('select user_id from ' + table + ' where user_id = $1', [users[0].id])).rows, [])
+  }
+  await pg.exec('set role authenticated')
+  const { invite: replacement } = (await pg.query('select regenerate_invite() as invite')).rows[0]
+  await login(2)
+  await pg.query('select join_space($1)', [replacement])
+  await pg.query('select leave_space()')
+  await login(1)
+  const { invite: finalInvite } = (await pg.query('select regenerate_invite() as invite')).rows[0]
+  await pg.exec('reset role')
+  await pg.query('delete from auth.users where id = $1', [users[1].id])
+  await pg.exec('set role authenticated')
+  await login(2)
+  await assert.rejects(pg.query('select join_space($1)', [finalInvite]), { code: '22023' })
+})
+
 test('pairing, one-time invite, shared dates, private locations and outsider isolation', async () => {
   await migrate()
   await login(0)

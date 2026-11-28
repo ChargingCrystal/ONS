@@ -51,15 +51,20 @@ Send `Authorization: Bearer <access_token>` on authenticated routes and `Accept:
 | Method and path | Auth | Request | Success | Error codes |
 | --- | --- | --- | --- | --- |
 | `GET /api/health` | Public | — | `200` with process status `{"status":"ok"}` | `internal` |
-| `GET /api/space` | Bearer | — | `200` with `id`, `invite`, and `members`, or `204` when unpaired | `unauthorized`, `internal` |
+| `GET /api/space` | Bearer | — | `200` with `id`, `invite`, and `members` including nullable `display_name`, or `204` when unpaired | `unauthorized`, `internal` |
 | `POST /api/space` | Bearer | — | `200` with the new space `id` | `already_paired`, `unauthorized`, `internal` |
 | `POST /api/space/join` | Bearer | JSON `code`, 32 lowercase hex characters | `200` with the joined space `id`. Joining consumes the invite. | `invite_invalid`, `already_paired`, `validation_failed`, `unauthorized`, `internal` |
+| `POST /api/space/invite` | Bearer | — | `200` with a new `invite` for a sole member. The old code expires immediately. | `no_space`, `already_paired`, `unauthorized`, `internal` |
+| `DELETE /api/space/membership` | Bearer | — | `204` after leaving, or if already unpaired. Removes the caller's location and invalidates the invite. | `unauthorized`, `internal` |
+| `GET /api/profile` | Bearer | — | `200` with the caller's `display_name`, or null in that field if unset | `unauthorized`, `internal` |
+| `PUT /api/profile` | Bearer | JSON `display_name`, 1–60 characters after trimming | `200` with the saved `display_name` | `validation_failed`, `unauthorized`, `internal` |
 | `GET /api/dates` | Bearer | Optional `q`, `category` key, `status`, `sort`, `order`, `offset` | `200` with up to 50 date rows containing category keys | `validation_failed`, `unauthorized`, `internal` |
 | `POST /api/dates` | Bearer | JSON `title`, `category` key, optional `status` and `meeting_at` | `200` with the created date row | `validation_failed`, `no_space`, `unauthorized`, `internal` |
 | `PATCH /api/dates/:id` | Bearer | UUID `id` and at least one writable date field. A supplied `category` must be a key. | `200` with the updated date row | `validation_failed`, `not_found`, `unauthorized`, `internal` |
 | `DELETE /api/dates/:id` | Bearer | UUID `id` | `204` | `validation_failed`, `not_found`, `unauthorized`, `internal` |
 | `GET /api/location` | Bearer | — | `200` with `partners`, `distanceKm`, and `midpoint`. Unavailable derived values are null. | `unauthorized`, `internal` |
 | `PUT /api/location` | Bearer | JSON `lat` and `lon` | `200` with the saved location row | `validation_failed`, `no_space`, `unauthorized`, `internal` |
+| `DELETE /api/location` | Bearer | — | `204`, including when the caller has no saved location | `unauthorized`, `internal` |
 | `GET /api/dashboard` | Bearer | — | `200` with `serverTime`, `nextMeeting`, and `categoriesByMonth` grouped by UTC month and category key | `unauthorized`, `internal` |
 | `GET /api/photos` | Bearer | Optional `offset` | `200` with up to 30 uploads newest first, with signed URLs valid for five minutes | `validation_failed`, `no_space`, `unauthorized`, `internal` |
 | `POST /api/photos` | Bearer | Raw JPEG, PNG, or WebP bytes with matching `Content-Type`, up to 5 MiB in Nitro | `200` with Storage `id`, `path`, and `fullPath` | `validation_failed`, `no_space`, `unauthorized`, `internal` |
@@ -73,12 +78,27 @@ For example, `GET /api/dates?category=movie` filters by movie dates. Create or u
 
 Migration `003` trims surrounding whitespace and maps known legacy aliases case-insensitively. For example, `Kino`, `film`, and `cinema` become `movie` and share one dashboard category. Unrecognized values become `other`. Apply the migration before serving this API version.
 
+### Profiles and space lifecycle
+
+After applying migration `004`, clients can display each member's `display_name` in the space response. Use a translated fallback for a null name. `PUT /api/profile` with `{"display_name":"Alex"}` returns `{"display_name":"Alex"}`. Refresh the space after saving a name, rotating the invite, or leaving.
+
+A remaining partner keeps shared dates and photos and can generate another invite. Slot numbers can be either 1 or 2 for a sole member, so determine invite eligibility from the member count. When nobody remains, the shared data stays stored for operator cleanup and the old invite cannot be used. Downloads through already-issued photo URLs can still work until those URLs expire.
+
+#### Operator-managed account deletion
+
+1. Verify the deletion request and the account's UUID in **Supabase → Authentication → Users**. If the requester can still sign in, they can leave their space first to remove membership and their saved location.
+2. Check whether the account owns Storage objects. Supabase can reject account deletion until ownership is resolved. Use supported Storage operations to reassign objects that the remaining partner should keep or remove objects approved for deletion. Review the whole project, including the private `gallery` bucket.
+3. Delete the verified Auth user using the Supabase dashboard. Foreign keys remove the user's profile, membership, and saved location. Confirm the remaining partner can still access the space and regenerate an invite. An empty space's old invite cannot be redeemed.
+4. Coordinate cleanup for abandoned spaces separately. Deleting the Auth user ends token refresh, while access tokens already issued may remain valid until expiry. The removed membership blocks shared-space reads through RLS.
+
+The app does not expose an Auth account-deletion endpoint or require a service-role key in Nitro. [Supabase user deletion](https://supabase.com/docs/guides/auth/managing-user-data#deleting-users)
+
 ### Error codes and statuses
 
 | `data.code` | HTTP | Meaning |
 | --- | --- | --- |
 | `invite_invalid` | 400 | The invite is unknown or already consumed. |
-| `already_paired` | 409 | The caller already belongs to a space. |
+| `already_paired` | 409 | The caller already belongs to a space when creating or joining, or the space already has two members when rotating an invite. |
 | `no_space` | 403 | The operation requires the caller to belong to a space. |
 | `not_found` | 404 | The date is missing or outside the caller's visible rows. |
 | `validation_failed` | 400, 413, 415 | Input is invalid, an upload is too large, or the media type or signature is unsupported. |

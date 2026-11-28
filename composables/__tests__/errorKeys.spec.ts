@@ -3,11 +3,16 @@ import { describe, expect, test } from 'vitest'
 import { apiErrorCodeSchema } from '../../shared/api-errors'
 import { apiErrorKey, authErrorKey } from '../errorKeys'
 
-const german = JSON.parse(readFileSync(new URL('../../i18n/locales/de.json', import.meta.url), 'utf8'))
+function load(locale: string) {
+  return JSON.parse(readFileSync(new URL(`../../i18n/locales/${locale}.json`, import.meta.url), 'utf8'))
+}
 
-// Finds the text of a key such as "errors.api.no_space". messages.spec.ts covers en and nl.
-function textFor(key: string): unknown {
-  return key.split('.').reduce<any>((node, part) => node?.[part], german)
+const german = load('de')
+
+// Finds the text of a key such as "errors.api.noSpace". messages.spec.ts checks that en and nl
+// have the same keys as de.
+function textFor(key: string, messages: object = german): unknown {
+  return key.split('.').reduce<any>((node, part) => node?.[part], messages)
 }
 
 // Codes from Supabase Auth, plus "network" and "unavailable" from the session store.
@@ -44,6 +49,25 @@ describe('apiErrorKey', () => {
 
   test('network problems have a message', () => {
     expect(textFor('errors.network')).toBeTypeOf('string')
+  })
+})
+
+// The photo upload sends this code when the storage of a couple is full. It is named here
+// because the list in shared/api-errors.ts only contains it once the photos branch is merged.
+describe('quota_exceeded', () => {
+  const locales = ['de', 'en', 'nl']
+
+  test.each(locales)('has its own message in %s', (locale) => {
+    const key = apiErrorKey('quota_exceeded')
+    expect(key).not.toBe('errors.unexpected')
+    expect(textFor(key, load(locale))).toBeTypeOf('string')
+  })
+
+  test('is translated, not copied between languages', () => {
+    const key = apiErrorKey('quota_exceeded')
+    expect(key).not.toBe('errors.unexpected')
+    const texts = locales.map(locale => textFor(key, load(locale)))
+    expect(new Set(texts).size).toBe(locales.length)
   })
 })
 

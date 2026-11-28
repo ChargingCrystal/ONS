@@ -80,20 +80,29 @@ export function useSpace() {
     return load({ discardOld: true })
   }
 
-  // Runs one request that changes something, and turns failures into messages.
-  async function act(request: () => Promise<void>, reactions: Reactions = {}): Promise<Outcome> {
+  // Removes the last message and notes who is acting now.
+  async function begin() {
     store.notice = undefined
     await session.init()
-    const person = session.user?.id
+    return session.user?.id
+  }
+
+  // A message is only for the person who started the action. If the session ended
+  // on the way, it would be left for whoever signs in next.
+  function tell(message: SpaceNotice, person: string | undefined) {
+    if (session.user?.id === person) {
+      store.notice = message
+    }
+  }
+
+  // Runs one request that changes something, and turns failures into messages.
+  async function act(request: () => Promise<void>, reactions: Reactions = {}): Promise<Outcome> {
+    const person = await begin()
     try {
       await request()
       return { ok: true }
     }
     catch (error) {
-      // Signed out meanwhile: the message would be meant for somebody else.
-      if (session.user?.id !== person) {
-        return { ok: false }
-      }
       const code = error instanceof ApiError ? error.code : undefined
       const reaction = code ? reactions[code] : undefined
       if (reaction?.reload) {
@@ -102,7 +111,7 @@ export function useSpace() {
       if (reaction?.fieldError) {
         return { ok: false, fieldError: reaction.fieldError }
       }
-      store.notice = reaction?.notice ?? { messageKey: messageKeyOf(error), tone: 'error' }
+      tell(reaction?.notice ?? { messageKey: messageKeyOf(error), tone: 'error' }, person)
       return { ok: false }
     }
   }
@@ -155,14 +164,14 @@ export function useSpace() {
   // The warning before leaving depends on whether somebody stays behind.
   // Returns true if it can be shown.
   async function checkBeforeLeaving() {
-    store.notice = undefined
+    const person = await begin()
     const request = store.startRequest()
     try {
       const answer = await api<SpaceResponse | ''>('/api/space')
       request.loaded(answer || null)
     }
     catch (error) {
-      store.notice = { messageKey: messageKeyOf(error), tone: 'error' }
+      tell({ messageKey: messageKeyOf(error), tone: 'error' }, person)
       return false
     }
     return store.state.status === 'waiting' || store.state.status === 'paired'

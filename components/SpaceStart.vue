@@ -40,10 +40,11 @@ async function joinSpace() {
     <section class="flex flex-col gap-3">
       <h2 class="text-xl">{{ t('space.create.title') }}</h2>
       <p class="text-muted">{{ t('space.create.hint') }}</p>
+      <!-- aria-disabled, because a disabled button would lose the keyboard focus. -->
       <button
         type="button"
-        :disabled="pending"
-        class="min-h-touch rounded-md bg-accent px-4 font-strong text-on-accent disabled:cursor-wait disabled:faded"
+        :aria-disabled="pending"
+        class="min-h-touch rounded-md bg-accent px-4 font-strong text-on-accent aria-disabled:cursor-wait aria-disabled:faded"
         @click="createSpace"
       >
         {{ t('space.create.button') }}
@@ -72,8 +73,8 @@ async function joinSpace() {
         />
         <button
           type="submit"
-          :disabled="pending"
-          class="min-h-touch rounded-md border border-field bg-surface px-4 font-strong disabled:cursor-wait disabled:faded"
+          :aria-disabled="pending"
+          class="min-h-touch rounded-md border border-field bg-surface px-4 font-strong aria-disabled:cursor-wait aria-disabled:faded"
         >
           {{ t('space.join.button') }}
         </button>

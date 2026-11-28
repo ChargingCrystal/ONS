@@ -69,10 +69,11 @@ async function save() {
       :error="error ? t(error, { max: DISPLAY_NAME_MAX }) : undefined"
     />
     <div class="flex flex-wrap gap-2">
+      <!-- aria-disabled, because a disabled button would lose the keyboard focus. -->
       <button
         type="submit"
-        :disabled="pending"
-        class="min-h-touch rounded-md bg-accent px-4 font-strong text-on-accent disabled:cursor-wait disabled:faded"
+        :aria-disabled="pending"
+        class="min-h-touch rounded-md bg-accent px-4 font-strong text-on-accent aria-disabled:cursor-wait aria-disabled:faded"
       >
         {{ t('space.name.save') }}
       </button>

@@ -59,10 +59,11 @@ async function newCode() {
         {{ copyResult === 'copied' ? t('space.invite.copied') : '' }}
         {{ copyResult === 'failed' ? t('space.invite.copyFailed') : '' }}
       </p>
+      <!-- aria-disabled, because a disabled button would lose the keyboard focus. -->
       <button
         type="button"
-        :disabled="pending"
-        class="min-h-touch rounded-md border border-field bg-surface px-4 font-strong disabled:cursor-wait disabled:faded"
+        :aria-disabled="pending"
+        class="min-h-touch rounded-md border border-field bg-surface px-4 font-strong aria-disabled:cursor-wait aria-disabled:faded"
         @click="newCode"
       >
         {{ t('space.invite.renew') }}
@@ -74,8 +75,8 @@ async function newCode() {
       <p class="text-muted">{{ t('space.invite.noCode') }}</p>
       <button
         type="button"
-        :disabled="pending"
-        class="min-h-touch rounded-md bg-accent px-4 font-strong text-on-accent disabled:cursor-wait disabled:faded"
+        :aria-disabled="pending"
+        class="min-h-touch rounded-md bg-accent px-4 font-strong text-on-accent aria-disabled:cursor-wait aria-disabled:faded"
         @click="newCode"
       >
         {{ t('space.invite.create') }}

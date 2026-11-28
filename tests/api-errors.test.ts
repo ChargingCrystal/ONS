@@ -33,7 +33,7 @@ const dashboard = {
 const photo = { id, path: id + '/' + id, fullPath: 'gallery/' + id + '/' + id }
 
 beforeAll(async () => {
-  for (const name of ['defineEventHandler', 'createError', 'getHeader', 'getRouterParam', 'getValidatedRouterParams', 'getValidatedQuery', 'readValidatedBody', 'sendNoContent'] as const) {
+  for (const name of ['defineEventHandler', 'createError', 'getHeader', 'getRouterParam', 'getValidatedRouterParams', 'getValidatedQuery', 'readBody', 'readValidatedBody', 'sendNoContent'] as const) {
     vi.stubGlobal(name, h3[name])
   }
   for (const [name, value] of Object.entries(backend)) {
@@ -61,8 +61,9 @@ beforeAll(async () => {
   router.delete('/api/space/membership', (await import('../server/api/space/membership.delete')).default)
   router.delete('/api/location', (await import('../server/api/location.delete')).default)
   router.get('/api/dashboard', (await import('../server/api/dashboard.get')).default)
-  router.post('/api/photos', (await import('../server/api/photos/index.post')).default)
-  router.get('/api/photos', (await import('../server/api/photos/index.get')).default)
+  router.post('/api/photos/upload-url', (await import('../server/api/photos/upload-url.post')).default)
+  router.post('/api/photos/confirm', (await import('../server/api/photos/confirm.post')).default)
+  router.use('/api/photos', (await import('../server/api/photos/index')).default)
   router.delete('/api/photos/:name', (await import('../server/api/photos/[name].delete')).default)
   server = createServer(h3.toNodeListener(h3.createApp().use(router))).listen(0, '127.0.0.1')
   await once(server, 'listening')
@@ -142,15 +143,34 @@ test.each([
   expect(upstream).not.toHaveBeenCalled()
 })
 
-test('returns validation_failed and retains 415 for unsupported photo media', async () => {
-  upstream.mockResolvedValueOnce(Response.json(id))
-  await expectError(await request('POST', '/photos', 'plain text', true, 'text/plain'), 415, 'validation_failed')
+test('does not route binary uploads through Nitro', async () => {
+  const response = await request('POST', '/photos', 'bytes', true, 'image/png')
+  await expectError(response, 405, 'validation_failed')
+  expect(response.headers.get('allow')).toBe('GET, HEAD')
+  expect(upstream).not.toHaveBeenCalled()
 })
 
-test('returns validation_failed and retains 413 for oversized photos', async () => {
+test.each([
+  [{ mime: 'text/plain', size: 5 }, 415],
+  [{ mime: 'image/png', size: 5242881 }, 413],
+] as const)('rejects invalid signed-upload metadata %j', async (body, status) => {
+  await expectError(await request('POST', '/photos/upload-url', JSON.stringify(body)), status, 'validation_failed')
+  expect(upstream).not.toHaveBeenCalled()
+})
+
+test('rejects an over-quota reservation before signing', async () => {
+  postgresError('PT409', 409)
+  const response = await request('POST', '/photos/upload-url', '{"mime":"image/png","size":42}')
+  expect(response.status).toBe(409)
+  expect(await response.json()).toMatchObject({ data: { code: 'quota_exceeded' } })
+  expect(upstream).toHaveBeenCalledTimes(1)
+})
+
+test('returns the same not_found for an invisible or missing photo', async () => {
   upstream.mockResolvedValueOnce(Response.json(id))
-  const body = new Uint8Array(5 * 1024 * 1024 + 1)
-  await expectError(await request('POST', '/photos', body, true, 'image/png'), 413, 'validation_failed')
+  upstream.mockResolvedValueOnce(Response.json([]))
+  await expectError(await request('DELETE', '/photos/' + id), 404, 'not_found')
+  expect(upstream).toHaveBeenCalledTimes(2)
 })
 
 test('returns unauthorized for missing and rejected bearer tokens', async () => {
@@ -209,7 +229,7 @@ test.each([
     schema: contract.photosResponseSchema,
     upstreamData: [
       id,
-      [{ name: id, created_at: now }],
+      [{ id, path: photo.path, mime: 'image/png', size: 10, uploaded_by: id, created_at: now }],
       [{ path: photo.path, error: null, signedURL: '/object/sign/' + photo.fullPath + '?token=test' }],
     ],
   },
@@ -222,20 +242,22 @@ test.each([
   schema.parse(await response.json())
 })
 
-test('photo uploads match the shared response schema', async () => {
-  upstream.mockResolvedValueOnce(Response.json(id))
-  upstream.mockImplementationOnce(async input => {
-    const key = new URL(String(input)).pathname.split('/object/')[1]
-    return Response.json({ Id: photo.id, Key: key })
+test('signs the reserved path and confirms stored photo metadata', async () => {
+  upstream.mockResolvedValueOnce(Response.json({ uploadId: id, path: photo.path }))
+  upstream.mockResolvedValueOnce(Response.json({ url: '/object/upload/sign/' + photo.fullPath + '?token=test-token' }))
+  const requestBody = contract.photoUploadUrlRequestSchema.parse({ mime: 'image/png', size: 5242880 })
+  const signed = await request('POST', '/photos/upload-url', JSON.stringify(requestBody))
+  expect(signed.status).toBe(200)
+  expect(contract.photoUploadUrlResponseSchema.parse(await signed.json())).toMatchObject({
+    uploadId: id, path: photo.path, token: 'test-token',
   })
-  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aE1sAAAAASUVORK5CYII=', 'base64'))
-  const uploadRequest = contract.uploadPhotoRequestSchema.parse({ body: png, contentType: 'image/png' })
-  const response = await request('POST', '/photos', uploadRequest.body, true, uploadRequest.contentType)
-  expect(response.status).toBe(200)
-  const upload = contract.uploadPhotoResponseSchema.parse(await response.json())
-  expect(upload.id).toBe(photo.id)
-  expect(upload.path).toMatch(new RegExp('^' + id + '/[a-f0-9-]{36}$'))
-  expect(upload.fullPath).toBe('gallery/' + upload.path)
+  expect(String(upstream.mock.calls[1][0])).toContain('/object/upload/sign/' + photo.fullPath)
+
+  const stored = { id, space_id: id, path: photo.path, mime: 'image/png', size: 5242880, uploaded_by: id, created_at: now }
+  upstream.mockResolvedValueOnce(Response.json(stored))
+  const confirmed = await request('POST', '/photos/confirm', JSON.stringify({ uploadId: id }))
+  expect(confirmed.status).toBe(200)
+  expect(contract.photoResponseSchema.parse(await confirmed.json())).toEqual(stored)
 })
 
 test('filters dates by a category key and returns the shared date shape', async () => {
@@ -302,7 +324,7 @@ test.each(['/space/membership', '/location'])('returns an empty 204 for DELETE %
 test.each([
   { method: 'GET', path: '/space', upstreamData: [null] },
   { method: 'DELETE', path: '/dates/' + id, upstreamData: [{ id }] },
-  { method: 'DELETE', path: '/photos/' + id, upstreamData: [id, []] },
+  { method: 'DELETE', path: '/photos/' + id, upstreamData: [id, [{ path: photo.path }], [], null] },
 ])('$method $path returns the shared empty response', async ({ method, path, upstreamData }) => {
   for (const data of upstreamData) {
     upstream.mockResolvedValueOnce(Response.json(data))

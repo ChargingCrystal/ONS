@@ -6,6 +6,7 @@ const errorDetails = {
   already_paired: { statusCode: 409, statusMessage: 'Already paired' },
   no_space: { statusCode: 403, statusMessage: 'Join or create a space first' },
   not_found: { statusCode: 404, statusMessage: 'Not found' },
+  quota_exceeded: { statusCode: 409, statusMessage: 'Photo quota exceeded' },
   validation_failed: { statusCode: 400, statusMessage: 'Validation failed' },
   unauthorized: { statusCode: 401, statusMessage: 'Unauthorized' },
   internal: { statusCode: 500, statusMessage: 'Internal server error' },
